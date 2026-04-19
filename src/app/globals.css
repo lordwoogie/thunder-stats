@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap");
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0a0e1a;
+  color: #f0f4ff;
+  font-family: "Barlow", system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+.display {
+  font-family: "Oswald", system-ui, sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.label {
+  font-family: "Barlow Condensed", system-ui, sans-serif;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.card {
+  background: #111827;
+  border: 1px solid #1f2a44;
+  border-radius: 14px;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold uppercase tracking-wider transition;
+}
+
+.btn-primary {
+  @apply btn bg-accent text-black hover:bg-accent-hot disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+.btn-ghost {
+  @apply btn border border-court-line text-slate-200 hover:bg-court-alt;
+}
+
+.input {
+  @apply w-full rounded-lg border border-court-line bg-court-bg px-3 py-2 text-slate-100 outline-none focus:border-accent;
+}
+
+.select {
+  @apply rounded-lg border border-court-line bg-court-bg px-3 py-2 text-slate-100 outline-none focus:border-accent;
+}
+
+.chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-court-line bg-court-alt px-2.5 py-0.5 text-xs uppercase tracking-wider text-slate-300;
+}
+
+.chip-locked {
+  @apply chip border-red-900/50 bg-red-950/40 text-red-300;
+}
+
+.chip-live {
+  @apply chip border-accent/50 bg-accent/10 text-accent;
+}
+
+.chip-final {
+  @apply chip border-emerald-900/50 bg-emerald-950/40 text-emerald-300;
+}

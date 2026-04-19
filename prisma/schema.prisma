@@ -1,0 +1,72 @@
+// Prisma schema for NBA Playoffs Pick'em (C_OKC Dynasty)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  username           String   @unique
+  passwordHash       String
+  teamName           String
+  isAdmin            Boolean  @default(false)
+  mustChangePassword Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  picks Pick[]
+}
+
+model Series {
+  id             String   @id @default(cuid())
+  round          Int // 1=R1, 2=Semis, 3=Conf Finals, 4=Finals
+  conference     String? // "East" | "West" | null (Finals)
+  seriesLabel    String
+  slot           String   @unique // stable slug e.g. "R1-E-1v8", "SF-E-A", "CF-E", "FINALS"
+
+  higherSeed     String?
+  higherSeedAbbr String?
+  higherSeedNum  Int?
+  lowerSeed      String?
+  lowerSeedAbbr  String?
+  lowerSeedNum   Int?
+
+  lockAt         DateTime?
+
+  winner         String?
+  gamesPlayed    Int?
+  isFinal        Boolean  @default(false)
+
+  parentSeriesId String?
+  parentSeries   Series?  @relation("SeriesProgression", fields: [parentSeriesId], references: [id])
+  childSeries    Series[] @relation("SeriesProgression")
+
+  // Which slot in the parent series this feeds: "higher" or "lower"
+  parentSlot     String?
+
+  picks Pick[]
+
+  @@index([round])
+  @@index([conference])
+}
+
+model Pick {
+  id            String   @id @default(cuid())
+  userId        String
+  seriesId      String
+  pickedWinner  String
+  pickedGames   Int
+  pointsAwarded Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  series Series @relation(fields: [seriesId], references: [id])
+
+  @@unique([userId, seriesId])
+  @@index([seriesId])
+}
