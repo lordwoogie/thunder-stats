@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C.OKC Draft Lottery — Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap');
+  :root {
+    --thunder-blue:#007AC1; --thunder-dark:#002D62; --thunder-orange:#EF6100;
+    --thunder-yellow:#FDBB30; --bg-dark:#0A0E1A; --bg-card:#111827;
+    --bg-card-alt:#1A2236; --text-primary:#F0F4FF; --text-secondary:#8B9DC3;
+    --text-dim:#4A5578; --glow-blue:rgba(0,122,193,0.3); --glow-orange:rgba(239,97,0,0.25);
+    --bye:#22C55E; --playoff:#FDBB30; --eliminated:#64748B; --lottery:#EF6100;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { background:var(--bg-dark); color:var(--text-primary); font-family:'Barlow',sans-serif; min-height:100vh; }
+  body { padding:0 0 4rem; }
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 2rem; background:linear-gradient(180deg,rgba(0,45,98,0.6) 0%,transparent 100%); border-bottom:1px solid rgba(0,122,193,0.15); position:relative; }
+  .header::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--thunder-blue),var(--thunder-orange),transparent); opacity:0.5; }
+  .brand { font-family:'Oswald',sans-serif; font-weight:700; font-size:1.4rem; letter-spacing:0.12em; text-transform:uppercase; }
+  .brand span { color:var(--thunder-orange); }
+  .sub { font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; color:var(--text-secondary); letter-spacing:0.18em; text-transform:uppercase; }
+
+  .wrap { max-width:1280px; margin:0 auto; padding:1.5rem 1.5rem; }
+  .grid { display:grid; grid-template-columns:1fr 1.15fr; gap:1.25rem; align-items:start; }
+  @media (max-width:980px){ .grid { grid-template-columns:1fr; } }
+
+  .card { background:var(--bg-card); border:1px solid rgba(0,122,193,0.15); border-radius:14px; padding:1.2rem 1.25rem; position:relative; overflow:hidden; }
+  .card h2 { font-family:'Oswald',sans-serif; font-weight:600; font-size:1rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--thunder-blue); margin-bottom:0.9rem; display:flex; align-items:center; gap:0.6rem; }
+  .card h2 .pill { font-family:'Barlow Condensed',sans-serif; font-size:0.7rem; letter-spacing:0.12em; padding:0.15rem 0.55rem; border-radius:999px; background:rgba(239,97,0,0.12); color:var(--thunder-orange); border:1px solid rgba(239,97,0,0.3); }
+  .card .help { color:var(--text-secondary); font-size:0.85rem; line-height:1.45; margin-bottom:0.85rem; }
+
+  /* Standings */
+  .standings { display:flex; flex-direction:column; gap:0.4rem; }
+  .row { display:grid; grid-template-columns:36px 1fr auto; align-items:center; gap:0.6rem; padding:0.55rem 0.7rem; border-radius:8px; background:var(--bg-card-alt); border:1px solid rgba(255,255,255,0.04); transition:border-color 0.15s; }
+  .row .seed { font-family:'Oswald',sans-serif; font-size:1.1rem; font-weight:700; color:var(--text-dim); text-align:center; }
+  .row input.tname { background:transparent; border:none; outline:none; color:var(--text-primary); font-family:'Barlow',sans-serif; font-size:0.95rem; width:100%; padding:0.15rem 0.2rem; border-radius:4px; }
+  .row input.tname:focus { background:rgba(0,122,193,0.08); }
+  .row .tag { font-family:'Barlow Condensed',sans-serif; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; padding:0.2rem 0.55rem; border-radius:999px; white-space:nowrap; }
+  .tag.bye { color:var(--bye); background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.28); }
+  .tag.playoff { color:var(--playoff); background:rgba(253,187,48,0.10); border:1px solid rgba(253,187,48,0.28); }
+  .tag.lottery { color:var(--lottery); background:rgba(239,97,0,0.10); border:1px solid rgba(239,97,0,0.28); }
+  .tag.eliminated { color:var(--eliminated); background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.28); }
+  .row.bye { border-left:3px solid var(--bye); }
+  .row.playoff { border-left:3px solid var(--playoff); }
+  .row.lottery { border-left:3px solid var(--lottery); }
+
+  /* Bracket */
+  .bracket { display:flex; flex-direction:column; gap:0.65rem; margin-top:0.4rem; }
+  .matchup { background:var(--bg-card-alt); border:1px solid rgba(0,122,193,0.10); border-radius:10px; padding:0.6rem 0.8rem; }
+  .matchup .label { font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-dim); margin-bottom:0.45rem; }
+  .matchup .teams { display:flex; gap:0.5rem; }
+  .matchup .opt { flex:1; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.55rem 0.75rem; background:var(--bg-card); border:1px solid rgba(255,255,255,0.05); border-radius:8px; cursor:pointer; transition:all 0.15s; }
+  .matchup .opt:hover { border-color:rgba(0,122,193,0.45); }
+  .matchup .opt.win { border-color:var(--thunder-yellow); background:rgba(253,187,48,0.08); }
+  .matchup .opt.win .seed { color:var(--thunder-yellow); }
+  .matchup .opt.win .res { color:var(--thunder-yellow); }
+  .matchup .opt .seed { font-family:'Oswald',sans-serif; font-weight:700; color:var(--text-dim); font-size:0.95rem; }
+  .matchup .opt .nm { flex:1; font-size:0.92rem; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .matchup .opt .res { font-family:'Barlow Condensed',sans-serif; font-size:0.7rem; letter-spacing:0.14em; color:var(--text-dim); }
+
+  /* Odds */
+  .odds-list { display:flex; flex-direction:column; gap:0.55rem; }
+  .odds-row { display:grid; grid-template-columns:32px 1fr 60px; align-items:center; gap:0.7rem; }
+  .odds-row .seed { font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; color:var(--text-secondary); text-align:center; }
+  .odds-row .name { font-size:0.92rem; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .odds-row .pct { font-family:'Oswald',sans-serif; font-weight:600; color:var(--thunder-yellow); text-align:right; font-size:0.95rem; }
+  .odds-row .bar-wrap { grid-column:2/4; height:8px; background:rgba(255,255,255,0.04); border-radius:999px; overflow:hidden; margin-top:0.15rem; }
+  .odds-row .bar { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--thunder-blue),var(--thunder-orange)); transition:width 0.5s ease; }
+  .odds-row.firstround .bar { background:linear-gradient(90deg,#94A3B8,#64748B); }
+
+  .actions { display:flex; gap:0.7rem; flex-wrap:wrap; margin-top:1rem; }
+  .btn { background:linear-gradient(135deg,var(--thunder-blue),#0095E8); border:none; border-radius:8px; padding:0.7rem 1.4rem; font-family:'Oswald',sans-serif; font-size:0.85rem; font-weight:600; color:#fff; cursor:pointer; letter-spacing:0.1em; text-transform:uppercase; transition:all 0.15s; }
+  .btn:hover { transform:translateY(-1px); box-shadow:0 4px 18px rgba(0,122,193,0.4); }
+  .btn.alt { background:linear-gradient(135deg,var(--thunder-orange),#FF8A33); }
+  .btn.alt:hover { box-shadow:0 4px 18px rgba(239,97,0,0.4); }
+  .btn.ghost { background:transparent; border:1px solid rgba(0,122,193,0.4); color:var(--text-primary); }
+  .btn.ghost:hover { box-shadow:none; border-color:var(--thunder-blue); background:rgba(0,122,193,0.08); }
+
+  /* Lottery results */
+  .picks { display:flex; flex-direction:column; gap:0.45rem; margin-top:0.5rem; min-height:60px; }
+  .pick { display:grid; grid-template-columns:48px 1fr auto; align-items:center; gap:0.7rem; padding:0.7rem 0.85rem; background:var(--bg-card-alt); border:1px solid rgba(0,122,193,0.10); border-radius:10px; opacity:0; transform:translateY(8px); }
+  .pick.show { animation:reveal 0.45s ease forwards; }
+  @keyframes reveal { to { opacity:1; transform:translateY(0); } }
+  .pick .num { font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem; color:var(--thunder-yellow); text-align:center; }
+  .pick .nm { font-size:1rem; color:var(--text-primary); font-weight:500; }
+  .pick .src { font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-secondary); }
+  .pick.first { border-color:var(--thunder-orange); background:linear-gradient(135deg,rgba(239,97,0,0.10),var(--bg-card-alt)); }
+  .pick.first .num { color:var(--thunder-orange); font-size:1.7rem; }
+
+  /* Sim heatmap */
+  .heatmap { overflow-x:auto; margin-top:0.4rem; }
+  table.hm { border-collapse:collapse; width:100%; min-width:500px; font-family:'Barlow Condensed',sans-serif; }
+  table.hm th, table.hm td { padding:0.45rem 0.55rem; text-align:center; font-size:0.82rem; }
+  table.hm thead th { color:var(--text-dim); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; font-size:0.7rem; border-bottom:1px solid rgba(0,122,193,0.15); }
+  table.hm tbody th { text-align:left; color:var(--text-primary); font-weight:500; padding-left:0.2rem; white-space:nowrap; }
+  table.hm tbody td { color:var(--text-primary); border-radius:4px; transition:background 0.15s; font-variant-numeric:tabular-nums; }
+  table.hm .meta { font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; color:var(--text-secondary); margin-top:0.6rem; letter-spacing:0.05em; }
+
+  .legend { display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.7rem; font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; color:var(--text-secondary); letter-spacing:0.05em; }
+  .legend .it { display:flex; align-items:center; gap:0.4rem; }
+  .legend .sw { width:12px; height:12px; border-radius:3px; }
+
+  .footer-note { text-align:center; color:var(--text-dim); font-size:0.78rem; margin-top:1.2rem; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.08em; }
+  a.back { color:var(--thunder-blue); text-decoration:none; font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; letter-spacing:0.12em; text-transform:uppercase; }
+  a.back:hover { color:var(--thunder-orange); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="brand">C.OKC <span>Draft Lottery</span></div>
+    <div class="sub">10-Team League · Proposal Visualizer</div>
+  </div>
+  <a class="back" href="./index.html">← Live Stats</a>
+</div>
+
+<div class="wrap">
+  <div class="grid">
+
+    <!-- Left column: standings + bracket -->
+    <div>
+      <div class="card">
+        <h2>Final Standings <span class="pill">Editable</span></h2>
+        <div class="help">Enter your league's end-of-season standings. Seeds 1-2 get byes. Seeds 3-6 play 1st round. Seeds 7-10 miss the playoffs.</div>
+        <div class="standings" id="standings"></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <h2>1st Round Results</h2>
+        <div class="help">Click the team that <strong>WON</strong> each series. The losing team joins the lottery pool with 5% odds (NBA play-in style).</div>
+        <div class="bracket" id="bracket"></div>
+      </div>
+    </div>
+
+    <!-- Right column: odds + lottery -->
+    <div>
+      <div class="card">
+        <h2>Lottery Odds</h2>
+        <div class="help">6 teams enter the lottery: 4 non-playoff teams (seeds 7-10) plus the 2 first-round losers.</div>
+        <div class="odds-list" id="odds"></div>
+        <div class="legend">
+          <div class="it"><div class="sw" style="background:linear-gradient(90deg,#94A3B8,#64748B)"></div>1st Round Loser (5%)</div>
+          <div class="it"><div class="sw" style="background:linear-gradient(90deg,var(--thunder-blue),var(--thunder-orange))"></div>Non-Playoff (15-30%)</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <h2>Run the Lottery</h2>
+        <div class="help">Spin once to draw the pick order, or simulate 10,000 lotteries to see probability distributions.</div>
+        <div class="actions">
+          <button class="btn" onclick="spinLottery()">Spin Lottery</button>
+          <button class="btn alt" onclick="runSim()">Simulate 10,000</button>
+          <button class="btn ghost" onclick="clearResults()">Clear</button>
+        </div>
+        <div class="picks" id="picks"></div>
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer-note">Lottery uses NBA-style weighted ball draw. Seed 1 = best record, Seed 10 = worst record.</div>
+</div>
+
+<script>
+// ===== Initial data =====
+const DEFAULT_TEAMS = [
+  "Team Alpha","Team Bravo","Team Charlie","Team Delta","Team Echo",
+  "Team Foxtrot","Team Golf","Team Hotel","Team India","Team Juliet"
+];
+// Lottery odds by source (seed slot):
+// Seeds 7-10 (non-playoff) get fixed odds. 1st round losers get 5% each.
+const NONPLAYOFF_ODDS = { 10:30, 9:25, 8:20, 7:15 };
+const FIRSTROUND_LOSER_ODDS = 5;
+
+// State: which seed won each first round series.
+// Series 1: seed 3 vs seed 6.  Series 2: seed 4 vs seed 5.
+let seriesWinner = { s36: 3, s45: 4 }; // higher seed wins by default
+
+let teams = DEFAULT_TEAMS.slice();
+
+// ===== Render =====
+function render() {
+  renderStandings();
+  renderBracket();
+  renderOdds();
+}
+
+function renderStandings() {
+  const wrap = document.getElementById("standings");
+  wrap.innerHTML = "";
+  for (let i = 0; i < 10; i++) {
+    const seed = i + 1;
+    let cls, tag;
+    if (seed <= 2) { cls = "bye"; tag = "Bye · Semifinal"; }
+    else if (seed <= 6) { cls = "playoff"; tag = "1st Round"; }
+    else { cls = "lottery"; tag = "Lottery"; }
+    const row = document.createElement("div");
+    row.className = "row " + cls;
+    row.innerHTML = `
+      <div class="seed">${seed}</div>
+      <input class="tname" data-i="${i}" value="${escapeHtml(teams[i])}" maxlength="32">
+      <div class="tag ${cls}">${tag}</div>
+    `;
+    wrap.appendChild(row);
+  }
+  wrap.querySelectorAll("input.tname").forEach(inp => {
+    inp.addEventListener("input", e => {
+      teams[+e.target.dataset.i] = e.target.value || `Team ${+e.target.dataset.i + 1}`;
+      renderBracket(); renderOdds();
+    });
+  });
+}
+
+function renderBracket() {
+  const wrap = document.getElementById("bracket");
+  const series = [
+    { key: "s36", label: "Series 1 · 3 vs 6", a: 3, b: 6 },
+    { key: "s45", label: "Series 2 · 4 vs 5", a: 4, b: 5 },
+  ];
+  wrap.innerHTML = series.map(s => {
+    const winA = seriesWinner[s.key] === s.a;
+    const winB = seriesWinner[s.key] === s.b;
+    return `
+      <div class="matchup">
+        <div class="label">${s.label}</div>
+        <div class="teams">
+          <div class="opt ${winA?'win':''}" data-key="${s.key}" data-pick="${s.a}">
+            <div class="seed">${s.a}</div><div class="nm">${escapeHtml(teams[s.a-1])}</div>
+            <div class="res">${winA?'WIN':'LOSE'}</div>
+          </div>
+          <div class="opt ${winB?'win':''}" data-key="${s.key}" data-pick="${s.b}">
+            <div class="seed">${s.b}</div><div class="nm">${escapeHtml(teams[s.b-1])}</div>
+            <div class="res">${winB?'WIN':'LOSE'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+  wrap.querySelectorAll(".opt").forEach(el => {
+    el.addEventListener("click", () => {
+      seriesWinner[el.dataset.key] = +el.dataset.pick;
+      renderBracket(); renderOdds();
+    });
+  });
+}
+
+// Build the lottery pool from current state.
+function buildPool() {
+  // Non-playoff seeds first (sorted worst → best so heaviest odds appear up top)
+  const pool = [];
+  [10,9,8,7].forEach(seed => {
+    pool.push({ seed, name: teams[seed-1], odds: NONPLAYOFF_ODDS[seed], type: "nonplayoff" });
+  });
+  // First-round losers
+  const loser36 = seriesWinner.s36 === 3 ? 6 : 3;
+  const loser45 = seriesWinner.s45 === 4 ? 5 : 4;
+  [loser36, loser45].forEach(seed => {
+    pool.push({ seed, name: teams[seed-1], odds: FIRSTROUND_LOSER_ODDS, type: "firstround" });
+  });
+  return pool;
+}
+
+function renderOdds() {
+  const pool = buildPool();
+  const wrap = document.getElementById("odds");
+  const max = 30;
+  wrap.innerHTML = pool.map(p => `
+    <div>
+      <div class="odds-row ${p.type==='firstround'?'firstround':''}">
+        <div class="seed">${p.seed}</div>
+        <div class="name">${escapeHtml(p.name)} ${p.type==='firstround'?'<span style="color:var(--text-dim);font-size:0.78rem">· 1st rd loser</span>':''}</div>
+        <div class="pct">${p.odds}%</div>
+      </div>
+      <div class="odds-row ${p.type==='firstround'?'firstround':''}">
+        <div></div>
+        <div class="bar-wrap"><div class="bar" style="width:${(p.odds/max)*100}%"></div></div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ===== Lottery draw =====
+// Weighted draw without replacement: at each step, normalize remaining odds.
+function drawOnce(pool) {
+  const order = [];
+  let remaining = pool.map(p => ({...p}));
+  while (remaining.length) {
+    const total = remaining.reduce((s,p) => s + p.odds, 0);
+    let r = Math.random() * total;
+    let pickIdx = remaining.length - 1;
+    for (let i = 0; i < remaining.length; i++) {
+      r -= remaining[i].odds;
+      if (r <= 0) { pickIdx = i; break; }
+    }
+    order.push(remaining[pickIdx]);
+    remaining.splice(pickIdx, 1);
+  }
+  return order;
+}
+
+function spinLottery() {
+  const pool = buildPool();
+  const order = drawOnce(pool);
+  const picks = document.getElementById("picks");
+  document.getElementById("heatmap").innerHTML = "";
+  picks.innerHTML = "";
+  // Reveal in dramatic NBA-style: last pick first → 1st pick last
+  const reversed = order.slice().reverse();
+  reversed.forEach((p, idx) => {
+    const pickNum = order.length - idx; // pick number (6 down to 1)
+    const div = document.createElement("div");
+    div.className = "pick" + (pickNum === 1 ? " first" : "");
+    div.style.animationDelay = (idx * 0.35) + "s";
+    div.innerHTML = `
+      <div class="num">${pickNum}</div>
+      <div class="nm">${escapeHtml(p.name)} <span style="color:var(--text-dim);font-size:0.8rem">· seed ${p.seed}</span></div>
+      <div class="src">${p.type === 'firstround' ? '1st Rd Loser · 5%' : p.odds + '%'}</div>
+    `;
+    picks.appendChild(div);
+    requestAnimationFrame(() => div.classList.add("show"));
+  });
+}
+
+// ===== Monte Carlo simulation =====
+function runSim() {
+  const pool = buildPool();
+  const N = 10000;
+  // counts[teamIdx][pickPos] = times that team landed at pickPos
+  const counts = pool.map(() => new Array(pool.length).fill(0));
+  const idxByKey = {};
+  pool.forEach((p, i) => idxByKey[p.seed] = i);
+
+  for (let s = 0; s < N; s++) {
+    const order = drawOnce(pool);
+    order.forEach((p, pos) => {
+      counts[idxByKey[p.seed]][pos]++;
+    });
+  }
+
+  document.getElementById("picks").innerHTML = "";
+  const hm = document.getElementById("heatmap");
+  let html = `<table class="hm"><thead><tr><th style="text-align:left">Team (Seed)</th>`;
+  for (let i = 0; i < pool.length; i++) html += `<th>Pick ${i+1}</th>`;
+  html += `<th>Avg</th></tr></thead><tbody>`;
+  pool.forEach((p, i) => {
+    html += `<tr><th>${escapeHtml(p.name)} <span style="color:var(--text-dim)">· ${p.seed}</span></th>`;
+    let avgPick = 0;
+    for (let pos = 0; pos < pool.length; pos++) {
+      const pct = counts[i][pos] / N;
+      avgPick += (pos + 1) * pct;
+      const intensity = Math.min(1, pct / 0.5); // cap so colors don't all wash out
+      const bg = `rgba(239,97,0,${(intensity * 0.55).toFixed(3)})`;
+      html += `<td style="background:${bg}">${(pct * 100).toFixed(1)}%</td>`;
+    }
+    html += `<td style="color:var(--thunder-yellow);font-weight:600">${avgPick.toFixed(2)}</td>`;
+    html += `</tr>`;
+  });
+  html += `</tbody></table><div class="meta">Based on ${N.toLocaleString()} simulated lotteries · cells show probability of landing at that pick · brighter = more likely</div>`;
+  hm.innerHTML = html;
+}
+
+function clearResults() {
+  document.getElementById("picks").innerHTML = "";
+  document.getElementById("heatmap").innerHTML = "";
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+render();
+</script>
+
+</body>
+</html>
