@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>C.OKC Draft Lottery — Visualizer</title>
+<title>C_OKC Dynasty Lottery — 2025 Proof of Concept</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap');
   :root {
@@ -90,6 +90,16 @@
   .pick.first { border-color:var(--thunder-orange); background:linear-gradient(135deg,rgba(239,97,0,0.10),var(--bg-card-alt)); }
   .pick.first .num { color:var(--thunder-orange); font-size:1.7rem; }
 
+  /* Fixed picks 7-10 */
+  .fixed-picks { margin-top:1.1rem; padding-top:1rem; border-top:1px dashed rgba(0,122,193,0.18); }
+  .fp-label { font-family:'Barlow Condensed',sans-serif; font-size:0.74rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-dim); margin-bottom:0.55rem; }
+  .fp-row { display:grid; grid-template-columns:48px 1fr auto; align-items:center; gap:0.7rem; padding:0.55rem 0.85rem; background:var(--bg-card-alt); border:1px solid rgba(255,255,255,0.04); border-radius:8px; margin-bottom:0.4rem; }
+  .fp-row .num { font-family:'Oswald',sans-serif; font-weight:700; font-size:1.2rem; color:var(--text-secondary); text-align:center; }
+  .fp-row .nm { font-size:0.95rem; color:var(--text-primary); }
+  .fp-row .src { font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+  .fp-row.champ { border-color:rgba(253,187,48,0.35); background:linear-gradient(135deg,rgba(253,187,48,0.06),var(--bg-card-alt)); }
+  .fp-row.champ .num, .fp-row.champ .src { color:var(--thunder-yellow); }
+
   /* Sim heatmap */
   .heatmap { overflow-x:auto; margin-top:0.4rem; }
   table.hm { border-collapse:collapse; width:100%; min-width:500px; font-family:'Barlow Condensed',sans-serif; }
@@ -112,8 +122,8 @@
 
 <div class="header">
   <div>
-    <div class="brand">C.OKC <span>Draft Lottery</span></div>
-    <div class="sub">10-Team League · Proposal Visualizer</div>
+    <div class="brand">C_OKC <span>Dynasty Lottery</span></div>
+    <div class="sub">2025 Season · Proof of Concept</div>
   </div>
   <a class="back" href="./index.html">← Live Stats</a>
 </div>
@@ -150,7 +160,7 @@
 
       <div class="card" style="margin-top:1rem">
         <h2>Run the Lottery</h2>
-        <div class="help">Spin once to draw the pick order, or simulate 10,000 lotteries to see probability distributions.</div>
+        <div class="help">Lottery determines picks 1-6. Picks 7-10 are fixed by playoff finish (semifinal losers → finals loser → champion).</div>
         <div class="actions">
           <button class="btn" onclick="spinLottery()">Spin Lottery</button>
           <button class="btn alt" onclick="runSim()">Simulate 10,000</button>
@@ -158,6 +168,7 @@
         </div>
         <div class="picks" id="picks"></div>
         <div class="heatmap" id="heatmap"></div>
+        <div class="fixed-picks" id="fixed-picks"></div>
       </div>
     </div>
 
@@ -166,19 +177,28 @@
 </div>
 
 <script>
-// ===== Initial data =====
+// ===== Initial data — C_OKC Dynasty 2025 final standings =====
 const DEFAULT_TEAMS = [
-  "Team Alpha","Team Bravo","Team Charlie","Team Delta","Team Echo",
-  "Team Foxtrot","Team Golf","Team Hotel","Team India","Team Juliet"
+  "BLAKE",                          // 1 · Blake · 14-2-2 · bye
+  "KL2 Aspire LLC",                 // 2 · Connor · 13-3-2 · bye
+  "blayzehembree",                  // 3 · Blayze · 10-7-1
+  "Matas Mouse",                    // 4 · Jake · 10-7-1
+  "Lordwoogie",                     // 5 · Nick · 9-7-2
+  "go15hawks",                      // 6 · Jacob · 9-8-1
+  "#TOPIĆSTRONG",                   // 7 · Pryce · 7-10-1 · 15%
+  "Culture Club",                   // 8 · Drew · 4-12-2 · 20%
+  "evantraylor",                    // 9 · Evan · 4-14 · 25%
+  "Colangelo's Sentient Collars"    // 10 · Kyle · 4-14 · 30%
 ];
 // Lottery odds by source (seed slot):
 // Seeds 7-10 (non-playoff) get fixed odds. 1st round losers get 5% each.
 const NONPLAYOFF_ODDS = { 10:30, 9:25, 8:20, 7:15 };
 const FIRSTROUND_LOSER_ODDS = 5;
 
-// State: which seed won each first round series.
-// Series 1: seed 3 vs seed 6.  Series 2: seed 4 vs seed 5.
-let seriesWinner = { s36: 3, s45: 4 }; // higher seed wins by default
+// State: which seed won each first round series. Defaults = actual 2025 results.
+// Series 1: seed 3 vs seed 6 → blayzehembree (3) beat go15hawks (6).
+// Series 2: seed 4 vs seed 5 → Lordwoogie (5) beat Matas Mouse (4) — upset.
+let seriesWinner = { s36: 3, s45: 5 };
 
 let teams = DEFAULT_TEAMS.slice();
 
@@ -187,6 +207,29 @@ function render() {
   renderStandings();
   renderBracket();
   renderOdds();
+  renderFixedPicks();
+}
+
+// Fixed picks 7-10 from the actual 2025 playoff finish.
+// Pick 7 = semifinal loser (Nick / seed 5), Pick 8 = semifinal loser (Blayze / seed 3),
+// Pick 9 = championship loser (BLAKE / seed 1), Pick 10 = champion (KL2 / seed 2).
+const FIXED_PICKS = [
+  { pick: 7,  seed: 5, src: "Semifinal Loser" },
+  { pick: 8,  seed: 3, src: "Semifinal Loser" },
+  { pick: 9,  seed: 1, src: "Championship Loser" },
+  { pick: 10, seed: 2, src: "Champion · 🏆" },
+];
+
+function renderFixedPicks() {
+  const wrap = document.getElementById("fixed-picks");
+  wrap.innerHTML = `<div class="fp-label">Picks 7-10 · Fixed by Playoff Finish</div>` +
+    FIXED_PICKS.map(p => `
+      <div class="fp-row ${p.pick === 10 ? 'champ' : ''}">
+        <div class="num">${p.pick}</div>
+        <div class="nm">${escapeHtml(teams[p.seed-1])} <span style="color:var(--text-dim);font-size:0.8rem">· seed ${p.seed}</span></div>
+        <div class="src">${p.src}</div>
+      </div>
+    `).join("");
 }
 
 function renderStandings() {
@@ -210,7 +253,7 @@ function renderStandings() {
   wrap.querySelectorAll("input.tname").forEach(inp => {
     inp.addEventListener("input", e => {
       teams[+e.target.dataset.i] = e.target.value || `Team ${+e.target.dataset.i + 1}`;
-      renderBracket(); renderOdds();
+      renderBracket(); renderOdds(); renderFixedPicks();
     });
   });
 }
