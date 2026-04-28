@@ -23,9 +23,8 @@
   .brand span { color:var(--thunder-orange); }
   .sub { font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; color:var(--text-secondary); letter-spacing:0.18em; text-transform:uppercase; }
 
-  .wrap { max-width:1280px; margin:0 auto; padding:1.5rem 1.5rem; }
-  .grid { display:grid; grid-template-columns:1fr 1.15fr; gap:1.25rem; align-items:start; }
-  @media (max-width:980px){ .grid { grid-template-columns:1fr; } }
+  .wrap { max-width:780px; margin:0 auto; padding:1.5rem 1.25rem; }
+  .stack { display:flex; flex-direction:column; gap:1rem; }
 
   .card { background:var(--bg-card); border:1px solid rgba(0,122,193,0.15); border-radius:14px; padding:1.2rem 1.25rem; position:relative; overflow:hidden; }
   .card h2 { font-family:'Oswald',sans-serif; font-weight:600; font-size:1rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--thunder-blue); margin-bottom:0.9rem; display:flex; align-items:center; gap:0.6rem; }
@@ -89,6 +88,8 @@
   .pick .src { font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-secondary); }
   .pick.first { border-color:var(--thunder-orange); background:linear-gradient(135deg,rgba(239,97,0,0.10),var(--bg-card-alt)); }
   .pick.first .num { color:var(--thunder-orange); font-size:1.7rem; }
+  .pick.jumped { border-color:rgba(34,197,94,0.45); }
+  .pick .jump { display:inline-block; margin-left:0.4rem; padding:0.1rem 0.5rem; border-radius:999px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#86efac; font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; font-weight:600; letter-spacing:0.06em; vertical-align:middle; }
 
   /* Fixed picks 7-10 */
   .fixed-picks { margin-top:1.1rem; padding-top:1rem; border-top:1px dashed rgba(0,122,193,0.18); }
@@ -129,47 +130,41 @@
 </div>
 
 <div class="wrap">
-  <div class="grid">
+  <div class="stack">
 
-    <!-- Left column: standings + bracket -->
-    <div>
-      <div class="card">
-        <h2>Final Standings <span class="pill">Editable</span></h2>
-        <div class="help">Enter your league's end-of-season standings. Seeds 1-2 get byes. Seeds 3-6 play 1st round. Seeds 7-10 miss the playoffs.</div>
-        <div class="standings" id="standings"></div>
-      </div>
-
-      <div class="card" style="margin-top:1rem">
-        <h2>1st Round Results</h2>
-        <div class="help">Click the team that <strong>WON</strong> each series. The losing team joins the lottery pool with 5% odds (NBA play-in style).</div>
-        <div class="bracket" id="bracket"></div>
+    <div class="card">
+      <h2>Lottery Odds</h2>
+      <div class="help">6 teams enter the lottery: 4 non-playoff teams (seeds 7-10) plus the 2 first-round losers.</div>
+      <div class="odds-list" id="odds"></div>
+      <div class="legend">
+        <div class="it"><div class="sw" style="background:linear-gradient(90deg,#94A3B8,#64748B)"></div>1st Round Loser (5%)</div>
+        <div class="it"><div class="sw" style="background:linear-gradient(90deg,var(--thunder-blue),var(--thunder-orange))"></div>Non-Playoff (15-30%)</div>
       </div>
     </div>
 
-    <!-- Right column: odds + lottery -->
-    <div>
-      <div class="card">
-        <h2>Lottery Odds</h2>
-        <div class="help">6 teams enter the lottery: 4 non-playoff teams (seeds 7-10) plus the 2 first-round losers.</div>
-        <div class="odds-list" id="odds"></div>
-        <div class="legend">
-          <div class="it"><div class="sw" style="background:linear-gradient(90deg,#94A3B8,#64748B)"></div>1st Round Loser (5%)</div>
-          <div class="it"><div class="sw" style="background:linear-gradient(90deg,var(--thunder-blue),var(--thunder-orange))"></div>Non-Playoff (15-30%)</div>
-        </div>
+    <div class="card">
+      <h2>Run the Lottery</h2>
+      <div class="help">Lottery determines picks 1-6. Picks 7-10 are fixed by playoff finish (semifinal losers → finals loser → champion). 🚀 = team jumped up vs. their odds-rank expected pick.</div>
+      <div class="actions">
+        <button class="btn" onclick="spinLottery()">Spin Lottery</button>
+        <button class="btn alt" onclick="runSim()">Simulate 10,000</button>
+        <button class="btn ghost" onclick="clearResults()">Clear</button>
       </div>
+      <div class="picks" id="picks"></div>
+      <div class="heatmap" id="heatmap"></div>
+      <div class="fixed-picks" id="fixed-picks"></div>
+    </div>
 
-      <div class="card" style="margin-top:1rem">
-        <h2>Run the Lottery</h2>
-        <div class="help">Lottery determines picks 1-6. Picks 7-10 are fixed by playoff finish (semifinal losers → finals loser → champion).</div>
-        <div class="actions">
-          <button class="btn" onclick="spinLottery()">Spin Lottery</button>
-          <button class="btn alt" onclick="runSim()">Simulate 10,000</button>
-          <button class="btn ghost" onclick="clearResults()">Clear</button>
-        </div>
-        <div class="picks" id="picks"></div>
-        <div class="heatmap" id="heatmap"></div>
-        <div class="fixed-picks" id="fixed-picks"></div>
-      </div>
+    <div class="card">
+      <h2>Final Standings <span class="pill">Editable</span></h2>
+      <div class="help">Enter your league's end-of-season standings. Seeds 1-2 get byes. Seeds 3-6 play 1st round. Seeds 7-10 miss the playoffs.</div>
+      <div class="standings" id="standings"></div>
+    </div>
+
+    <div class="card">
+      <h2>1st Round Results</h2>
+      <div class="help">Click the team that <strong>WON</strong> each series. The losing team joins the lottery pool with 5% odds (NBA play-in style).</div>
+      <div class="bracket" id="bracket"></div>
     </div>
 
   </div>
@@ -345,23 +340,37 @@ function drawOnce(pool) {
   return order;
 }
 
+// Expected pick order = teams sorted by odds desc, ties broken by seed desc
+// (worse seed = worse record = stronger claim to earlier pick).
+function expectedPositionMap(pool) {
+  const sorted = pool.slice().sort((a, b) => b.odds - a.odds || b.seed - a.seed);
+  const map = {};
+  sorted.forEach((p, i) => { map[p.seed] = i; });
+  return map;
+}
+
 function spinLottery() {
   const pool = buildPool();
   const order = drawOnce(pool);
+  const expected = expectedPositionMap(pool);
   const picks = document.getElementById("picks");
   document.getElementById("heatmap").innerHTML = "";
   picks.innerHTML = "";
-  // Reveal in dramatic NBA-style: last pick first → 1st pick last
-  const reversed = order.slice().reverse();
-  reversed.forEach((p, idx) => {
-    const pickNum = order.length - idx; // pick number (6 down to 1)
+  // DOM order: pick 1 at top → pick 6 at bottom.
+  // Reveal order: pick 6 first, pick 1 last (NBA-style suspense).
+  const total = order.length;
+  order.forEach((p, idx) => {
+    const pickNum = idx + 1;
+    const jump = expected[p.seed] - idx; // positive = jumped UP vs expected
+    const jumpBadge = jump > 0 ? `<span class="jump">🚀 +${jump}</span>` : '';
+    const oddsTxt = p.type === 'firstround' ? '1st Rd Loser · 5%' : p.odds + '%';
     const div = document.createElement("div");
-    div.className = "pick" + (pickNum === 1 ? " first" : "");
-    div.style.animationDelay = (idx * 0.35) + "s";
+    div.className = "pick" + (pickNum === 1 ? " first" : "") + (jump > 0 ? " jumped" : "");
+    div.style.animationDelay = ((total - 1 - idx) * 0.35) + "s";
     div.innerHTML = `
       <div class="num">${pickNum}</div>
-      <div class="nm">${escapeHtml(p.name)} <span style="color:var(--text-dim);font-size:0.8rem">· seed ${p.seed}</span></div>
-      <div class="src">${p.type === 'firstround' ? '1st Rd Loser · 5%' : p.odds + '%'}</div>
+      <div class="nm">${escapeHtml(p.name)} <span style="color:var(--text-dim);font-size:0.8rem">· seed ${p.seed}</span> ${jumpBadge}</div>
+      <div class="src">${oddsTxt}</div>
     `;
     picks.appendChild(div);
     requestAnimationFrame(() => div.classList.add("show"));
