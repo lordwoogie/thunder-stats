@@ -1,0 +1,18 @@
+{
+  "name": "thunder-stats-zepp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live OKC Thunder scores for Amazfit watches (Zepp OS).",
+  "scripts": {
+    "preview": "zeus preview",
+    "dev": "zeus dev",
+    "build": "zeus build",
+    "release": "zeus release"
+  },
+  "dependencies": {
+    "@zeppos/zml": "^1.2.2"
+  },
+  "devDependencies": {
+    "@zeppos/zeus-cli": "^2.0.0"
+  }
+}

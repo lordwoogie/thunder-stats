@@ -1,0 +1,5 @@
+Replace this placeholder with a real 192x192 PNG named `icon.png` in this folder
+before building. The Zeus CLI will reject the build without it.
+
+Suggested design: white lightning bolt on a Thunder-blue (#007AC1) background,
+optional Thunder-orange (#EF6100) accent.

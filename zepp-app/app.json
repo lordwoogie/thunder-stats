@@ -1,0 +1,50 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appId": 524288,
+    "appName": "Thunder Stats",
+    "appType": "app",
+    "version": {
+      "code": 1,
+      "name": "1.0.0"
+    },
+    "icon": "assets/icon.png",
+    "vender": "ChurchOfThunder",
+    "description": "Live OKC Thunder scores on your wrist."
+  },
+  "permissions": [
+    "device:os.bg_service",
+    "data:os.local_storage"
+  ],
+  "module": {
+    "page": {
+      "pages": [
+        "page/index/index"
+      ]
+    },
+    "app-side": {
+      "path": "app-side/index"
+    },
+    "setting": {
+      "path": "setting/index"
+    }
+  },
+  "i18n": {
+    "en-US": {
+      "name": "Thunder Stats"
+    }
+  },
+  "defaultLanguage": "en-US",
+  "platforms": [
+    { "name": "gtr-4",     "deviceSource": 245 },
+    { "name": "gts-4",     "deviceSource": 246 },
+    { "name": "t-rex-2",   "deviceSource": 247 },
+    { "name": "active",    "deviceSource": 7930112 },
+    { "name": "balance",   "deviceSource": 7995648 },
+    { "name": "cheetah",   "deviceSource": 7864832 },
+    { "name": "cheetah-pro","deviceSource": 7864833 },
+    { "name": "falcon",    "deviceSource": 251 },
+    { "name": "gtr-mini",  "deviceSource": 7930624 },
+    { "name": "t-rex-ultra","deviceSource": 7930368 }
+  ]
+}
