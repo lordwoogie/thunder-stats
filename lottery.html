@@ -91,7 +91,24 @@
   .pick.jumped { border-color:rgba(34,197,94,0.45); }
   .pick .jump { display:inline-block; margin-left:0.4rem; padding:0.1rem 0.5rem; border-radius:999px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#86efac; font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; font-weight:600; letter-spacing:0.06em; vertical-align:middle; }
 
-  /* Fixed picks 7-10 */
+  /* Draft board */
+  .board-wrap { overflow-x:auto; margin-top:0.3rem; }
+  table.board { border-collapse:separate; border-spacing:0; width:100%; min-width:560px; font-family:'Barlow',sans-serif; }
+  table.board thead th { font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-dim); padding:0.5rem 0.4rem; text-align:center; border-bottom:1px solid rgba(0,122,193,0.18); font-weight:600; }
+  table.board thead th.pos { text-align:left; padding-left:0.5rem; width:50px; }
+  table.board tbody td { padding:0.45rem 0.5rem; font-size:0.86rem; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.04); white-space:nowrap; vertical-align:middle; }
+  table.board tbody td.pos { font-family:'Oswald',sans-serif; font-weight:700; color:var(--text-secondary); text-align:left; padding-left:0.5rem; }
+  table.board tbody td.cell { background:rgba(0,122,193,0.04); border-radius:6px; }
+  table.board tbody tr td { transition:background 0.15s; }
+  table.board td .ovr { font-family:'Barlow Condensed',sans-serif; font-size:0.68rem; color:var(--text-dim); margin-right:0.35rem; letter-spacing:0.08em; }
+  table.board td .nm { font-weight:500; }
+  table.board td.tbd .nm { color:var(--text-dim); font-style:italic; }
+  table.board td .via { color:var(--thunder-yellow); font-style:italic; font-size:0.78rem; margin-left:0.3rem; }
+  table.board td.traded { background:rgba(253,187,48,0.06); border:1px solid rgba(253,187,48,0.18); }
+  table.board td.r1-fixed { background:rgba(0,122,193,0.06); }
+  table.board td.r1-champ { background:linear-gradient(135deg,rgba(253,187,48,0.10),rgba(0,122,193,0.04)); }
+
+  /* Fixed picks 7-10 (legacy, no longer rendered) */
   .fixed-picks { margin-top:1.1rem; padding-top:1rem; border-top:1px dashed rgba(0,122,193,0.18); }
   .fp-label { font-family:'Barlow Condensed',sans-serif; font-size:0.74rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-dim); margin-bottom:0.55rem; }
   .fp-row { display:grid; grid-template-columns:48px 1fr auto; align-items:center; gap:0.7rem; padding:0.55rem 0.85rem; background:var(--bg-card-alt); border:1px solid rgba(255,255,255,0.04); border-radius:8px; margin-bottom:0.4rem; }
@@ -152,7 +169,6 @@
       </div>
       <div class="picks" id="picks"></div>
       <div class="heatmap" id="heatmap"></div>
-      <div class="fixed-picks" id="fixed-picks"></div>
     </div>
 
     <div class="card">
@@ -165,6 +181,12 @@
       <h2>1st Round Results</h2>
       <div class="help">Click the team that <strong>WON</strong> each series. The losing team joins the lottery pool with 5% odds (NBA play-in style).</div>
       <div class="bracket" id="bracket"></div>
+    </div>
+
+    <div class="card">
+      <h2>Draft Board <span class="pill">4 Rounds · 40 Picks</span></h2>
+      <div class="help">Round 1: lottery (picks 1-6) + playoff finish (picks 7-10). Rounds 2-4: reverse standings. Traded picks marked with <em>via</em>. Spin the lottery to fill in round 1's top 6.</div>
+      <div class="board-wrap" id="board"></div>
     </div>
 
   </div>
@@ -202,29 +224,85 @@ function render() {
   renderStandings();
   renderBracket();
   renderOdds();
-  renderFixedPicks();
+  renderDraftBoard();
 }
 
-// Fixed picks 7-10 from the actual 2025 playoff finish.
-// Pick 7 = semifinal loser (Nick / seed 5), Pick 8 = semifinal loser (Blayze / seed 3),
-// Pick 9 = championship loser (BLAKE / seed 1), Pick 10 = champion (KL2 / seed 2).
-const FIXED_PICKS = [
-  { pick: 7,  seed: 5, src: "Semifinal Loser" },
-  { pick: 8,  seed: 3, src: "Semifinal Loser" },
-  { pick: 9,  seed: 1, src: "Championship Loser" },
-  { pick: 10, seed: 2, src: "Champion · 🏆" },
-];
+// Round 1 picks 7-10 from the actual 2025 playoff finish.
+// Pick 7 = semifinal loser (seed 5), 8 = semifinal loser (seed 3),
+// 9 = championship loser (seed 1), 10 = champion (seed 2).
+const R1_FIXED = { 7: 5, 8: 3, 9: 1, 10: 2 };
 
-function renderFixedPicks() {
-  const wrap = document.getElementById("fixed-picks");
-  wrap.innerHTML = `<div class="fp-label">Picks 7-10 · Fixed by Playoff Finish</div>` +
-    FIXED_PICKS.map(p => `
-      <div class="fp-row ${p.pick === 10 ? 'champ' : ''}">
-        <div class="num">${p.pick}</div>
-        <div class="nm">${escapeHtml(teams[p.seed-1])} <span style="color:var(--text-dim);font-size:0.8rem">· seed ${p.seed}</span></div>
-        <div class="src">${p.src}</div>
-      </div>
-    `).join("");
+// Round 1 traded picks: { originalOwnerSeed: newOwnerSeed }
+// Blake (seed 1) holds Connor's (seed 2) and Pryce's (seed 7) 1st rounders.
+const R1_TRADES = { 2: 1, 7: 1 };
+
+// Most recent lottery draw, or null if not yet run.
+let lastDrawOrder = null;
+
+function renderDraftBoard() {
+  const wrap = document.getElementById("board");
+  if (!wrap) return;
+  // Build round 1 (10 picks).
+  const r1 = [];
+  for (let pick = 1; pick <= 10; pick++) {
+    if (pick <= 6) {
+      const drawn = lastDrawOrder ? lastDrawOrder[pick - 1] : null;
+      r1.push(drawn
+        ? { origSeed: drawn.seed, lottery: true }
+        : { origSeed: null, lottery: true, tbd: true });
+    } else {
+      r1.push({ origSeed: R1_FIXED[pick], fixed: true, pick });
+    }
+  }
+  // Apply trades: actualOwnerSeed = trade or original.
+  r1.forEach(slot => {
+    if (slot.origSeed != null) {
+      slot.actualSeed = R1_TRADES[slot.origSeed] || slot.origSeed;
+      slot.traded = slot.actualSeed !== slot.origSeed;
+    }
+  });
+
+  // Rounds 2-4: reverse standings, no trades.
+  // Pick position N in round R goes to seed (11 - N).
+  const laterRounds = [2, 3, 4].map(round => {
+    const picks = [];
+    for (let pos = 1; pos <= 10; pos++) {
+      const seed = 11 - pos; // pos 1 → seed 10, pos 10 → seed 1
+      picks.push({ origSeed: seed, actualSeed: seed, round, pos });
+    }
+    return picks;
+  });
+
+  const rounds = [r1, ...laterRounds];
+
+  // Render as a table: rows = pick position 1-10, cols = R1..R4.
+  let html = `<table class="board"><thead><tr><th class="pos">Pick</th>`;
+  for (let r = 1; r <= 4; r++) html += `<th>Round ${r}</th>`;
+  html += `</tr></thead><tbody>`;
+  for (let pos = 0; pos < 10; pos++) {
+    html += `<tr><td class="pos">${pos + 1}</td>`;
+    for (let r = 0; r < 4; r++) {
+      const slot = rounds[r][pos];
+      const overall = r * 10 + pos + 1;
+      let cls = "cell";
+      let body;
+      if (r === 0 && slot.tbd) {
+        cls += " tbd";
+        body = `<span class="ovr">${overall}</span><span class="nm">— TBD lottery —</span>`;
+      } else {
+        const owner = teams[slot.actualSeed - 1];
+        const orig = teams[slot.origSeed - 1];
+        const via = slot.traded ? `<span class="via">via ${escapeHtml(orig)}</span>` : "";
+        body = `<span class="ovr">${overall}</span><span class="nm">${escapeHtml(owner)}</span>${via}`;
+        if (slot.traded) cls += " traded";
+        else if (r === 0 && slot.fixed) cls += slot.origSeed === 2 ? " r1-champ" : " r1-fixed";
+      }
+      html += `<td class="${cls}">${body}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
 }
 
 function renderStandings() {
@@ -248,7 +326,7 @@ function renderStandings() {
   wrap.querySelectorAll("input.tname").forEach(inp => {
     inp.addEventListener("input", e => {
       teams[+e.target.dataset.i] = e.target.value || `Team ${+e.target.dataset.i + 1}`;
-      renderBracket(); renderOdds(); renderFixedPicks();
+      renderBracket(); renderOdds(); renderDraftBoard();
     });
   });
 }
@@ -281,7 +359,8 @@ function renderBracket() {
   wrap.querySelectorAll(".opt").forEach(el => {
     el.addEventListener("click", () => {
       seriesWinner[el.dataset.key] = +el.dataset.pick;
-      renderBracket(); renderOdds();
+      lastDrawOrder = null;
+      renderBracket(); renderOdds(); renderDraftBoard();
     });
   });
 }
@@ -352,6 +431,8 @@ function expectedPositionMap(pool) {
 function spinLottery() {
   const pool = buildPool();
   const order = drawOnce(pool);
+  lastDrawOrder = order;
+  renderDraftBoard();
   const expected = expectedPositionMap(pool);
   const picks = document.getElementById("picks");
   document.getElementById("heatmap").innerHTML = "";
@@ -418,6 +499,8 @@ function runSim() {
 function clearResults() {
   document.getElementById("picks").innerHTML = "";
   document.getElementById("heatmap").innerHTML = "";
+  lastDrawOrder = null;
+  renderDraftBoard();
 }
 
 function escapeHtml(s) {
