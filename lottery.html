@@ -107,6 +107,14 @@
   table.board td.traded { background:rgba(253,187,48,0.06); border:1px solid rgba(253,187,48,0.18); }
   table.board td.r1-fixed { background:rgba(0,122,193,0.06); }
   table.board td.r1-champ { background:linear-gradient(135deg,rgba(253,187,48,0.10),rgba(0,122,193,0.04)); }
+  table.board td.expected .nm { color:var(--text-secondary); }
+  table.board td.expected .ovr { color:var(--text-dim); }
+  @keyframes cellFlash {
+    0%   { background:rgba(253,187,48,0.55); box-shadow:0 0 18px rgba(253,187,48,0.45) inset; transform:scale(1.04); }
+    60%  { transform:scale(1); }
+    100% { background:rgba(0,122,193,0.04); box-shadow:0 0 0 rgba(0,0,0,0); transform:scale(1); }
+  }
+  table.board td.flash { animation:cellFlash 0.65s ease forwards; }
 
   /* Fixed picks 7-10 (legacy, no longer rendered) */
   .fixed-picks { margin-top:1.1rem; padding-top:1rem; border-top:1px dashed rgba(0,122,193,0.18); }
@@ -239,43 +247,60 @@ const R1_TRADES = { 2: 1, 7: 1 };
 // Most recent lottery draw, or null if not yet run.
 let lastDrawOrder = null;
 
+// Render the cell content (inner HTML) for a given slot.
+function r1CellContent(slot, overall) {
+  const owner = teams[slot.actualSeed - 1];
+  const orig = teams[slot.origSeed - 1];
+  const via = slot.traded ? `<span class="via">via ${escapeHtml(orig)}</span>` : "";
+  return `<span class="ovr">${overall}</span><span class="nm">${escapeHtml(owner)}</span>${via}`;
+}
+function r1CellClass(slot, isExpected) {
+  let cls = "cell";
+  if (slot.traded) cls += " traded";
+  else if (slot.fixed) cls += slot.origSeed === 2 ? " r1-champ" : " r1-fixed";
+  if (isExpected) cls += " expected";
+  return cls;
+}
+function buildR1Slot(origSeed) {
+  const actualSeed = R1_TRADES[origSeed] || origSeed;
+  return { origSeed, actualSeed, traded: actualSeed !== origSeed };
+}
+
 function renderDraftBoard() {
   const wrap = document.getElementById("board");
   if (!wrap) return;
-  // Build round 1 (10 picks).
+  // Build round 1 picks 1-6:
+  // Pre-spin (lastDrawOrder null) → use expected order = lottery pool sorted by odds desc, ties by seed desc.
+  // Post-spin → use actual draw.
+  const pool = buildPool();
+  const expectedOrder = pool.slice().sort((a, b) => b.odds - a.odds || b.seed - a.seed);
   const r1 = [];
   for (let pick = 1; pick <= 10; pick++) {
     if (pick <= 6) {
-      const drawn = lastDrawOrder ? lastDrawOrder[pick - 1] : null;
-      r1.push(drawn
-        ? { origSeed: drawn.seed, lottery: true }
-        : { origSeed: null, lottery: true, tbd: true });
+      const source = lastDrawOrder ? lastDrawOrder[pick - 1] : expectedOrder[pick - 1];
+      const slot = buildR1Slot(source.seed);
+      slot.lottery = true;
+      slot.isExpected = !lastDrawOrder;
+      r1.push(slot);
     } else {
-      r1.push({ origSeed: R1_FIXED[pick], fixed: true, pick });
+      const slot = buildR1Slot(R1_FIXED[pick]);
+      slot.fixed = true;
+      r1.push(slot);
     }
   }
-  // Apply trades: actualOwnerSeed = trade or original.
-  r1.forEach(slot => {
-    if (slot.origSeed != null) {
-      slot.actualSeed = R1_TRADES[slot.origSeed] || slot.origSeed;
-      slot.traded = slot.actualSeed !== slot.origSeed;
-    }
-  });
 
   // Rounds 2-4: reverse standings, no trades.
-  // Pick position N in round R goes to seed (11 - N).
   const laterRounds = [2, 3, 4].map(round => {
     const picks = [];
     for (let pos = 1; pos <= 10; pos++) {
       const seed = 11 - pos; // pos 1 → seed 10, pos 10 → seed 1
-      picks.push({ origSeed: seed, actualSeed: seed, round, pos });
+      picks.push({ origSeed: seed, actualSeed: seed, traded: false });
     }
     return picks;
   });
 
   const rounds = [r1, ...laterRounds];
 
-  // Render as a table: rows = pick position 1-10, cols = R1..R4.
   let html = `<table class="board"><thead><tr><th class="pos">Pick</th>`;
   for (let r = 1; r <= 4; r++) html += `<th>Round ${r}</th>`;
   html += `</tr></thead><tbody>`;
@@ -284,25 +309,25 @@ function renderDraftBoard() {
     for (let r = 0; r < 4; r++) {
       const slot = rounds[r][pos];
       const overall = r * 10 + pos + 1;
-      let cls = "cell";
-      let body;
-      if (r === 0 && slot.tbd) {
-        cls += " tbd";
-        body = `<span class="ovr">${overall}</span><span class="nm">— TBD lottery —</span>`;
-      } else {
-        const owner = teams[slot.actualSeed - 1];
-        const orig = teams[slot.origSeed - 1];
-        const via = slot.traded ? `<span class="via">via ${escapeHtml(orig)}</span>` : "";
-        body = `<span class="ovr">${overall}</span><span class="nm">${escapeHtml(owner)}</span>${via}`;
-        if (slot.traded) cls += " traded";
-        else if (r === 0 && slot.fixed) cls += slot.origSeed === 2 ? " r1-champ" : " r1-fixed";
-      }
-      html += `<td class="${cls}">${body}</td>`;
+      const cls = r === 0 ? r1CellClass(slot, slot.isExpected) : "cell";
+      const body = r1CellContent(slot, overall);
+      const dataAttr = r === 0 ? ` data-r1pick="${pos + 1}"` : "";
+      html += `<td class="${cls}"${dataAttr}>${body}</td>`;
     }
     html += `</tr>`;
   }
   html += `</tbody></table>`;
   wrap.innerHTML = html;
+}
+
+// Update a single round-1 cell (for synced lottery reveal animation).
+function flashR1Cell(pickNum, drawn) {
+  const cell = document.querySelector(`[data-r1pick="${pickNum}"]`);
+  if (!cell) return;
+  const slot = buildR1Slot(drawn.seed);
+  cell.className = r1CellClass(slot, false) + " flash";
+  cell.innerHTML = r1CellContent(slot, pickNum);
+  setTimeout(() => cell.classList.remove("flash"), 700);
 }
 
 function renderStandings() {
@@ -359,6 +384,7 @@ function renderBracket() {
   wrap.querySelectorAll(".opt").forEach(el => {
     el.addEventListener("click", () => {
       seriesWinner[el.dataset.key] = +el.dataset.pick;
+      clearSpinAnimation();
       lastDrawOrder = null;
       renderBracket(); renderOdds(); renderDraftBoard();
     });
@@ -428,10 +454,18 @@ function expectedPositionMap(pool) {
   return map;
 }
 
+let spinTimeouts = [];
+function clearSpinAnimation() {
+  spinTimeouts.forEach(t => clearTimeout(t));
+  spinTimeouts = [];
+}
+
 function spinLottery() {
+  clearSpinAnimation();
   const pool = buildPool();
   const order = drawOnce(pool);
-  lastDrawOrder = order;
+  // Reset board to expected (pre-spin) state so cells animate from there.
+  lastDrawOrder = null;
   renderDraftBoard();
   const expected = expectedPositionMap(pool);
   const picks = document.getElementById("picks");
@@ -440,14 +474,16 @@ function spinLottery() {
   // DOM order: pick 1 at top → pick 6 at bottom.
   // Reveal order: pick 6 first, pick 1 last (NBA-style suspense).
   const total = order.length;
+  const STEP_MS = 350;
   order.forEach((p, idx) => {
     const pickNum = idx + 1;
     const jump = expected[p.seed] - idx; // positive = jumped UP vs expected
     const jumpBadge = jump > 0 ? `<span class="jump">🚀 +${jump}</span>` : '';
     const oddsTxt = p.type === 'firstround' ? '1st Rd Loser · 5%' : p.odds + '%';
+    const revealMs = (total - 1 - idx) * STEP_MS;
     const div = document.createElement("div");
     div.className = "pick" + (pickNum === 1 ? " first" : "") + (jump > 0 ? " jumped" : "");
-    div.style.animationDelay = ((total - 1 - idx) * 0.35) + "s";
+    div.style.animationDelay = (revealMs / 1000) + "s";
     div.innerHTML = `
       <div class="num">${pickNum}</div>
       <div class="nm">${escapeHtml(p.name)} <span style="color:var(--text-dim);font-size:0.8rem">· seed ${p.seed}</span> ${jumpBadge}</div>
@@ -455,7 +491,12 @@ function spinLottery() {
     `;
     picks.appendChild(div);
     requestAnimationFrame(() => div.classList.add("show"));
+
+    // Synced board cell flash at the same delay as the picks reveal.
+    spinTimeouts.push(setTimeout(() => flashR1Cell(pickNum, p), revealMs));
   });
+  // Finalize lastDrawOrder so any later re-render (e.g. team name edit) keeps the result.
+  spinTimeouts.push(setTimeout(() => { lastDrawOrder = order; }, (total - 1) * STEP_MS + 200));
 }
 
 // ===== Monte Carlo simulation =====
@@ -497,6 +538,7 @@ function runSim() {
 }
 
 function clearResults() {
+  clearSpinAnimation();
   document.getElementById("picks").innerHTML = "";
   document.getElementById("heatmap").innerHTML = "";
   lastDrawOrder = null;
