@@ -193,7 +193,7 @@
 
     <div class="card">
       <h2>Draft Board <span class="pill">4 Rounds · 40 Picks</span></h2>
-      <div class="help">Lottery + playoff finish sets the pick order for all 4 rounds. Picks 1-6 = lottery, 7-10 = playoff finish (semis losers → finals loser → champion). Round 1 trades only: Blake holds Pryce's and Connor's 1st rounders. Spin the lottery and watch each pick row flash across all 4 rounds.</div>
+      <div class="help">Picks 1-6 of every round follow the lottery result. Picks 7-10 differ by round — R1 uses playoff finish (semis losers → finals loser → champion), R2-R4 use reverse standings (worst record picks first). Round 1 trades only: Blake holds Pryce's and Connor's 1st rounders. Spin the lottery and watch each pick row flash across all 4 rounds.</div>
       <div class="board-wrap" id="board"></div>
     </div>
 
@@ -240,6 +240,11 @@ function render() {
 // 9 = championship loser (seed 1), 10 = champion (seed 2).
 const R1_FIXED = { 7: 5, 8: 3, 9: 1, 10: 2 };
 
+// Rounds 2-4 picks 7-10: reverse standings of non-lottery teams.
+// Worst record among these four picks first; best record picks last.
+// Order by record: seed 5 (worst) → seed 3 → seed 2 → seed 1 (best).
+const LATER_ROUNDS_FIXED = { 7: 5, 8: 3, 9: 2, 10: 1 };
+
 // Round 1 traded picks: { originalOwnerSeed: newOwnerSeed }
 // Blake (seed 1) holds Pryce's (seed 7) and Connor's (seed 2) 1st rounders.
 // Connor's pick lands at slot 10 because he won the championship; Blake owns it.
@@ -270,10 +275,10 @@ function cellClass(slot, round, isExpected) {
   return cls;
 }
 
-// Compute the full 10-pick draft order (seed array), used by every round.
-// Picks 1-6 = lottery (expected order pre-spin, actual order post-spin).
-// Picks 7-10 = fixed by playoff finish.
-function computeDraftOrder() {
+// Compute the 10-pick draft order (seed array) for a given round.
+// Picks 1-6 = lottery (expected order pre-spin, actual order post-spin) — same in every round.
+// Picks 7-10 = R1 uses playoff finish; R2-R4 use reverse standings.
+function computeDraftOrder(round) {
   const pool = buildPool();
   const expectedOrder = pool.slice().sort((a, b) => b.odds - a.odds || b.seed - a.seed);
   const seeds = [];
@@ -281,27 +286,28 @@ function computeDraftOrder() {
     const source = lastDrawOrder ? lastDrawOrder[i] : expectedOrder[i];
     seeds.push(source.seed);
   }
-  for (let pick = 7; pick <= 10; pick++) seeds.push(R1_FIXED[pick]);
+  const fixedMap = round === 1 ? R1_FIXED : LATER_ROUNDS_FIXED;
+  for (let pick = 7; pick <= 10; pick++) seeds.push(fixedMap[pick]);
   return seeds;
 }
 
 function renderDraftBoard() {
   const wrap = document.getElementById("board");
   if (!wrap) return;
-  const order = computeDraftOrder();
   const isExpected = !lastDrawOrder;
+  const ordersByRound = [1, 2, 3, 4].map(r => computeDraftOrder(r));
 
   let html = `<table class="board"><thead><tr><th class="pos">Pick</th>`;
   for (let r = 1; r <= 4; r++) html += `<th>Round ${r}</th>`;
   html += `</tr></thead><tbody>`;
   for (let pos = 0; pos < 10; pos++) {
-    const seed = order[pos];
     html += `<tr><td class="pos">${pos + 1}</td>`;
     for (let r = 1; r <= 4; r++) {
+      const seed = ordersByRound[r - 1][pos];
       const slot = r === 1 ? buildR1Slot(seed) : buildLaterSlot(seed);
       if (r === 1 && pos >= 6) slot.fixed = true;
       const overall = (r - 1) * 10 + pos + 1;
-      const expectedTag = r === 1 && pos < 6 && isExpected;
+      const expectedTag = pos < 6 && isExpected;
       html += `<td class="${cellClass(slot, r, expectedTag)}" data-pick="r${r}-${pos + 1}">${cellContent(slot, overall)}</td>`;
     }
     html += `</tr>`;
