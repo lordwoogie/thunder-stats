@@ -193,7 +193,7 @@
 
     <div class="card">
       <h2>Draft Board <span class="pill">4 Rounds · 40 Picks</span></h2>
-      <div class="help">Round 1: lottery (picks 1-6) + playoff finish (picks 7-10). Rounds 2-4: reverse standings. Traded picks marked with <em>via</em>. Spin the lottery to fill in round 1's top 6.</div>
+      <div class="help">Lottery + playoff finish sets the pick order for all 4 rounds. Picks 1-6 = lottery, 7-10 = playoff finish (semis losers → finals loser → champion). Round 1 trades only: Blake holds Pryce's and Connor's 1st rounders. Spin the lottery and watch each pick row flash across all 4 rounds.</div>
       <div class="board-wrap" id="board"></div>
     </div>
 
@@ -241,78 +241,68 @@ function render() {
 const R1_FIXED = { 7: 5, 8: 3, 9: 1, 10: 2 };
 
 // Round 1 traded picks: { originalOwnerSeed: newOwnerSeed }
-// Blake (seed 1) holds Connor's (seed 2) and Pryce's (seed 7) 1st rounders.
+// Blake (seed 1) holds Pryce's (seed 7) and Connor's (seed 2) 1st rounders.
+// Connor's pick lands at slot 10 because he won the championship; Blake owns it.
 const R1_TRADES = { 2: 1, 7: 1 };
 
 // Most recent lottery draw, or null if not yet run.
 let lastDrawOrder = null;
 
-// Render the cell content (inner HTML) for a given slot.
-function r1CellContent(slot, overall) {
+function buildR1Slot(origSeed) {
+  const actualSeed = R1_TRADES[origSeed] || origSeed;
+  return { origSeed, actualSeed, traded: actualSeed !== origSeed };
+}
+function buildLaterSlot(origSeed) {
+  // Rounds 2-4: no trades.
+  return { origSeed, actualSeed: origSeed, traded: false };
+}
+function cellContent(slot, overall) {
   const owner = teams[slot.actualSeed - 1];
   const orig = teams[slot.origSeed - 1];
   const via = slot.traded ? `<span class="via">via ${escapeHtml(orig)}</span>` : "";
   return `<span class="ovr">${overall}</span><span class="nm">${escapeHtml(owner)}</span>${via}`;
 }
-function r1CellClass(slot, isExpected) {
+function cellClass(slot, round, isExpected) {
   let cls = "cell";
   if (slot.traded) cls += " traded";
-  else if (slot.fixed) cls += slot.origSeed === 2 ? " r1-champ" : " r1-fixed";
+  else if (round === 1 && slot.fixed) cls += slot.origSeed === 2 ? " r1-champ" : " r1-fixed";
   if (isExpected) cls += " expected";
   return cls;
 }
-function buildR1Slot(origSeed) {
-  const actualSeed = R1_TRADES[origSeed] || origSeed;
-  return { origSeed, actualSeed, traded: actualSeed !== origSeed };
+
+// Compute the full 10-pick draft order (seed array), used by every round.
+// Picks 1-6 = lottery (expected order pre-spin, actual order post-spin).
+// Picks 7-10 = fixed by playoff finish.
+function computeDraftOrder() {
+  const pool = buildPool();
+  const expectedOrder = pool.slice().sort((a, b) => b.odds - a.odds || b.seed - a.seed);
+  const seeds = [];
+  for (let i = 0; i < 6; i++) {
+    const source = lastDrawOrder ? lastDrawOrder[i] : expectedOrder[i];
+    seeds.push(source.seed);
+  }
+  for (let pick = 7; pick <= 10; pick++) seeds.push(R1_FIXED[pick]);
+  return seeds;
 }
 
 function renderDraftBoard() {
   const wrap = document.getElementById("board");
   if (!wrap) return;
-  // Build round 1 picks 1-6:
-  // Pre-spin (lastDrawOrder null) → use expected order = lottery pool sorted by odds desc, ties by seed desc.
-  // Post-spin → use actual draw.
-  const pool = buildPool();
-  const expectedOrder = pool.slice().sort((a, b) => b.odds - a.odds || b.seed - a.seed);
-  const r1 = [];
-  for (let pick = 1; pick <= 10; pick++) {
-    if (pick <= 6) {
-      const source = lastDrawOrder ? lastDrawOrder[pick - 1] : expectedOrder[pick - 1];
-      const slot = buildR1Slot(source.seed);
-      slot.lottery = true;
-      slot.isExpected = !lastDrawOrder;
-      r1.push(slot);
-    } else {
-      const slot = buildR1Slot(R1_FIXED[pick]);
-      slot.fixed = true;
-      r1.push(slot);
-    }
-  }
-
-  // Rounds 2-4: reverse standings, no trades.
-  const laterRounds = [2, 3, 4].map(round => {
-    const picks = [];
-    for (let pos = 1; pos <= 10; pos++) {
-      const seed = 11 - pos; // pos 1 → seed 10, pos 10 → seed 1
-      picks.push({ origSeed: seed, actualSeed: seed, traded: false });
-    }
-    return picks;
-  });
-
-  const rounds = [r1, ...laterRounds];
+  const order = computeDraftOrder();
+  const isExpected = !lastDrawOrder;
 
   let html = `<table class="board"><thead><tr><th class="pos">Pick</th>`;
   for (let r = 1; r <= 4; r++) html += `<th>Round ${r}</th>`;
   html += `</tr></thead><tbody>`;
   for (let pos = 0; pos < 10; pos++) {
+    const seed = order[pos];
     html += `<tr><td class="pos">${pos + 1}</td>`;
-    for (let r = 0; r < 4; r++) {
-      const slot = rounds[r][pos];
-      const overall = r * 10 + pos + 1;
-      const cls = r === 0 ? r1CellClass(slot, slot.isExpected) : "cell";
-      const body = r1CellContent(slot, overall);
-      const dataAttr = r === 0 ? ` data-r1pick="${pos + 1}"` : "";
-      html += `<td class="${cls}"${dataAttr}>${body}</td>`;
+    for (let r = 1; r <= 4; r++) {
+      const slot = r === 1 ? buildR1Slot(seed) : buildLaterSlot(seed);
+      if (r === 1 && pos >= 6) slot.fixed = true;
+      const overall = (r - 1) * 10 + pos + 1;
+      const expectedTag = r === 1 && pos < 6 && isExpected;
+      html += `<td class="${cellClass(slot, r, expectedTag)}" data-pick="r${r}-${pos + 1}">${cellContent(slot, overall)}</td>`;
     }
     html += `</tr>`;
   }
@@ -320,14 +310,17 @@ function renderDraftBoard() {
   wrap.innerHTML = html;
 }
 
-// Update a single round-1 cell (for synced lottery reveal animation).
-function flashR1Cell(pickNum, drawn) {
-  const cell = document.querySelector(`[data-r1pick="${pickNum}"]`);
-  if (!cell) return;
-  const slot = buildR1Slot(drawn.seed);
-  cell.className = r1CellClass(slot, false) + " flash";
-  cell.innerHTML = r1CellContent(slot, pickNum);
-  setTimeout(() => cell.classList.remove("flash"), 700);
+// Flash all 4 round cells at a given pick position (for synced reveal animation).
+function flashPickRow(pickPos, drawn) {
+  for (let r = 1; r <= 4; r++) {
+    const cell = document.querySelector(`[data-pick="r${r}-${pickPos}"]`);
+    if (!cell) continue;
+    const slot = r === 1 ? buildR1Slot(drawn.seed) : buildLaterSlot(drawn.seed);
+    if (r === 1 && pickPos > 6) slot.fixed = true;
+    cell.className = cellClass(slot, r, false) + " flash";
+    cell.innerHTML = cellContent(slot, (r - 1) * 10 + pickPos);
+    setTimeout(() => cell.classList.remove("flash"), 700);
+  }
 }
 
 function renderStandings() {
@@ -493,7 +486,8 @@ function spinLottery() {
     requestAnimationFrame(() => div.classList.add("show"));
 
     // Synced board cell flash at the same delay as the picks reveal.
-    spinTimeouts.push(setTimeout(() => flashR1Cell(pickNum, p), revealMs));
+    // Updates all 4 rounds at this pick position (lottery sets order for every round).
+    spinTimeouts.push(setTimeout(() => flashPickRow(pickNum, p), revealMs));
   });
   // Finalize lastDrawOrder so any later re-render (e.g. team name edit) keeps the result.
   spinTimeouts.push(setTimeout(() => { lastDrawOrder = order; }, (total - 1) * STEP_MS + 200));
