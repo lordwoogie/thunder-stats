@@ -1,7 +1,7 @@
 # The Octogon — Sleeper Dynasty Analyzer
 
-Next.js app for Nick's Sleeper dynasty league **The Octogon** (8-team Superflex,
-Full PPR). Pulls live rosters from the Sleeper API, enriches them with 2025
+Next.js app for Nick's Sleeper dynasty league **The Octogon** (10-team Superflex,
+Full PPR — expanded from 8 in 2026). Pulls live rosters from the Sleeper API, enriches them with 2025
 season stats, and uses Claude (Anthropic) for on-demand analysis.
 
 ## Stack
@@ -29,7 +29,7 @@ Open http://localhost:3000.
 | `/`        | Dashboard: my starters, bench (sorted by PPG), taxi, IR           |
 | `/stats`   | Full roster sorted by 2025 PPG with status + notes                |
 | `/ai`      | AI Analysis: pre-built prompts + free-form "Ask Anything"         |
-| `/league`  | All 8 teams at a glance with key starters and totals              |
+| `/league`  | All teams at a glance with key starters and totals                |
 | `/trade`   | Trade Analyzer: propose a deal, Claude returns a dynasty verdict  |
 
 ## API routes

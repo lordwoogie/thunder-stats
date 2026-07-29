@@ -1,4 +1,5 @@
 import { LEAGUE_FORMAT, MY_ROSTER_ID } from "./constants";
+import { LEAGUE_INTEL } from "./league-intel";
 import { LeagueBundle } from "./league-service";
 import { EnrichedPlayer, TeamOverview } from "./types";
 
@@ -71,6 +72,8 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
     lines.push("");
   });
 
+  lines.push(LEAGUE_INTEL);
+
   return lines.join("\n");
 }
 
@@ -87,6 +90,9 @@ Priorities when answering:
 - Keep responses tight. Bulleted lists beat prose.
 - This is a Superflex league, so two-QB value matters a lot. A 2nd QB with a starting job > a WR3/RB3.
 - Respect the user: you are advising LordWoogie (roster_id 1). Speak in second person to them.
+- Honor the "League Landscape" intel section: respect the active game plan,
+  avoid re-litigating decisions already made, and factor in which owners are
+  good/bad trade partners when suggesting deals.
 `;
 
 export const PREBUILT_PROMPTS: Record<
@@ -111,16 +117,16 @@ export const PREBUILT_PROMPTS: Record<
   power: {
     title: "League Power Rankings",
     prompt:
-      "Rank all 8 teams 1–8 for 2026 dynasty strength, with a one-line rationale per team. Then separately rank them for the 2026 regular season (win-now only)."
+      "Rank all 10 teams 1–10 for 2026 dynasty strength, with a one-line rationale per team. Then separately rank them for the 2026 regular season (win-now only)."
   },
   rookie_draft: {
     title: "Rookie Draft Strategy",
     prompt:
-      "Based on my roster construction, what positions should I target in the 2026 rookie draft? What is my biggest positional need for year-1 impact, and what is my biggest long-term hole? Assume I have a top-4 rookie pick."
+      "Based on my roster construction, what positions should I target in the 2026 rookie draft? What is my biggest positional need for year-1 impact, and what is my biggest long-term hole? I hold pick 1.05 — evaluate my rookie board and whether best-RB-available is right there."
   },
   vor: {
     title: "Value Over Replacement",
     prompt:
-      "Identify the 3 players on my roster with the highest and the 3 with the lowest VOR at their position for 2026. Compare their 2025 PPG to replacement-level starters in this 8-team Superflex format."
+      "Identify the 3 players on my roster with the highest and the 3 with the lowest VOR at their position for 2026. Compare their 2025 PPG to replacement-level starters in this 10-team Superflex format."
   }
 };

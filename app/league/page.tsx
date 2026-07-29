@@ -21,7 +21,7 @@ export default async function LeaguePage() {
       <header>
         <h1 className="font-display text-3xl">League Intel</h1>
         <p className="text-muted font-cond text-sm uppercase tracking-wider">
-          All 8 teams at a glance
+          All {teams.length > 0 ? teams.length : 10} teams at a glance
         </p>
       </header>
 

@@ -37,7 +37,7 @@ export const POSITION_COLORS: Record<string, string> = {
 
 export const LEAGUE_FORMAT = {
   name: "The Octogon",
-  size: 8,
+  size: 10,
   format: "Superflex Dynasty",
   scoring: "Full PPR",
   taxi_slots: 7,
@@ -76,7 +76,7 @@ export const LEAGUE_MEMBERS: Array<{
     roster_id: 4,
     user_id: "992502526920003584",
     display_name: "cupac",
-    team_name: "Team Mid Asf"
+    team_name: "Darts and Caffreiny"
   },
   {
     roster_id: 5,
@@ -100,6 +100,20 @@ export const LEAGUE_MEMBERS: Array<{
     roster_id: 8,
     user_id: "1000513097783750656",
     display_name: "p33fish",
-    team_name: "Boris_NixonQB1"
+    team_name: "Bijan's Actual Testicles"
+  },
+  // Expansion teams (2026, league grew 8 → 10). Sleeper user_ids unknown —
+  // live /users data supplies them; these entries only seed dropdowns/fallbacks.
+  {
+    roster_id: 9,
+    user_id: "",
+    display_name: "BigDev0331",
+    team_name: "Bijan Deez Nuts"
+  },
+  {
+    roster_id: 10,
+    user_id: "",
+    display_name: "StR1LLaTHEk1LLa",
+    team_name: "Tua_Inches..."
   }
 ];

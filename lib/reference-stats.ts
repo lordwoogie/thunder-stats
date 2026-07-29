@@ -85,15 +85,18 @@ export const REF_STATS_BY_ID: Record<string, ReferenceStatLine> = Object.fromEnt
 
 export const PLAYER_NOTES: Record<string, string> = {
   "96": "Age 42, free agent, no team. Clear drop candidate.",
-  "8122": "RB4 on ARI depth chart, search rank ~999. Drop candidate.",
-  "7021": "Now RB3 on PIT behind Warren/Harris. 27yo, limited 2026 upside.",
-  "11651": "RB2 on SF depth chart on paper but ran 0 offensive snaps while CMC healthy.",
-  "9511": "LAC RB2; small frame, long-shot standalone value.",
-  "9504": "NE WR4 in worst offense in football.",
+  "8122": "Lost in expansion draft — no longer on my roster.",
+  "7594": "Lost in expansion draft — no longer on my roster.",
+  "7021": "Drop tier. PIT RB3 behind Warren/Harris. 27yo, limited 2026 upside.",
+  "11651": "Drop tier. SF RB2 on paper but ran 0 offensive snaps while CMC healthy.",
+  "9511": "Drop tier. LAC RB2; small frame, long-shot standalone value.",
+  "9504": "Drop tier. NE WR4 in worst offense in football.",
   "4137": "Age 30, on IR. Droppable if roster spot needed.",
   "11589": "On IR, was RB2 behind Conner. Young but limited role.",
-  "11632": "Torn ACL+meniscus Wk5 2025. Walking with cane as of Jan 2026. Week 1 availability uncertain.",
-  "6794": "Only 2 TDs in 2025 despite 84/1048. Massive positive TD regression candidate.",
-  "8137": "Breakout 2025 on DAL (1429/9/17.2 PPG). Age 25 ascending asset.",
-  "8112": "16.8 PPG but only 12 games. Elite efficiency when healthy."
+  "11632": "HOLD — value fully recovered post-ACL (FantasyPros #20). Don't sell at a discount.",
+  "6794": "FantasyPros #16. Only 2 TDs in 2025 despite 84/1048 — massive TD regression candidate.",
+  "8137": "FantasyPros #37. Breakout 2025 on DAL (1429/9/17.2 PPG). Age 25 ascending asset.",
+  "8112": "SELL target — BigDev0331 (Falcons fan, roster 9). Floor: 2027 1st + 2028 1st.",
+  "4983": "ACCEPT if offered a 2.07 pick — market has him WR34 / #87 overall.",
+  "12519": "Keeper — FantasyPros #44, top young WR asset on taxi."
 };
