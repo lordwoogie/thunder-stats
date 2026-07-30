@@ -3,6 +3,7 @@ import { MY_ROSTER_ID, SEASON } from "@/lib/constants";
 import { sortByPPG } from "@/lib/enrich";
 import PositionBadge from "@/components/PositionBadge";
 import { EnrichedPlayer } from "@/lib/types";
+import { describeDepth } from "@/lib/depth-charts";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
@@ -28,6 +29,25 @@ function Th({
   title?: string;
 }) {
   return <th title={title}>{children}</th>;
+}
+
+function DepthCell({ p }: { p: EnrichedPlayer }) {
+  const d = p.depth;
+  const label = describeDepth(d);
+  if (!label) return <td className="text-dim text-xs">—</td>;
+  const buried = (d?.ahead.length ?? 0) > 0;
+  return (
+    <td
+      className={`text-xs ${buried ? "text-amber-400" : "text-emerald-400"}`}
+      title={
+        d && d.ahead.length > 0
+          ? `Ahead: ${d.ahead.map((m) => m.name).join(", ")}`
+          : undefined
+      }
+    >
+      {label}
+    </td>
+  );
 }
 
 function NameCell({ p }: { p: EnrichedPlayer }) {
@@ -72,6 +92,7 @@ function QbTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Rush yards">RU YD</Th>
               <Th title="Rush TDs">RU TD</Th>
               <Th title="Snap share">SNAP%</Th>
+              <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
           <tbody>
@@ -106,6 +127,7 @@ function QbTable({ players }: { players: EnrichedPlayer[] }) {
                     {u?.rushing_tds ?? "—"}
                   </td>
                   <td className="text-muted">{pct(u?.snap_share)}</td>
+                  <DepthCell p={p} />
                 </tr>
               );
             })}
@@ -143,6 +165,7 @@ function RbTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Share of team carries + targets">TOUCH%</Th>
               <Th title="Touches per game">TCH/G</Th>
               <Th title="Snap share">SNAP%</Th>
+              <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
           <tbody>
@@ -177,6 +200,7 @@ function RbTable({ players }: { players: EnrichedPlayer[] }) {
                   <td className={tone(u?.snap_share, 0.65, 0.35)}>
                     {pct(u?.snap_share)}
                   </td>
+                  <DepthCell p={p} />
                 </tr>
               );
             })}
@@ -216,6 +240,7 @@ function PassCatcherTable({ players }: { players: EnrichedPlayer[] }) {
               <Th>TD</Th>
               <Th title="Snap share">SNAP%</Th>
               <Th title="Prior-season WOPR (nflverse)">WOPR*</Th>
+              <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
           <tbody>
@@ -256,6 +281,7 @@ function PassCatcherTable({ players }: { players: EnrichedPlayer[] }) {
                       ? p.advanced.wopr.toFixed(2)
                       : "—"}
                   </td>
+                  <DepthCell p={p} />
                 </tr>
               );
             })}

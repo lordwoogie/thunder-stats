@@ -166,6 +166,8 @@ export interface EnrichedPlayer {
   advanced: NflAdvancedStat | null;
   /** current-season derived usage: shares, rates, snap share */
   usage: import("./usage").SeasonUsage | null;
+  /** NFL depth-chart standing and the room around them */
+  depth: import("./depth-charts").DepthInfo | null;
 }
 
 export interface TeamOverview {

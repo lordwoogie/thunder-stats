@@ -6,6 +6,10 @@ import {
 } from "./types";
 import { PLAYER_NOTES, REF_STATS_BY_ID } from "./reference-stats";
 import type { SeasonUsage } from "./usage";
+import {
+  DepthRoomMate,
+  getDepthInfo
+} from "./depth-charts";
 
 const DEF_NAMES: Record<string, string> = {
   CLE: "Cleveland Browns",
@@ -25,6 +29,7 @@ export function enrichPlayer(
   stats: SleeperSeasonStats | null,
   advancedMap: Map<string, NflAdvancedStat> | null = null,
   usageMap: Map<string, SeasonUsage> | null = null,
+  depthRooms: Map<string, DepthRoomMate[]> | null = null,
   gamesPlayed: number | null = null
 ): EnrichedPlayer {
   const sp = playersMap[playerId];
@@ -32,6 +37,9 @@ export function enrichPlayer(
   const note = PLAYER_NOTES[playerId] ?? ref?.note ?? null;
   const advanced = advancedMap?.get(playerId) ?? null;
   const usage = usageMap?.get(playerId) ?? null;
+  const depth = depthRooms
+    ? getDepthInfo(playerId, playersMap, depthRooms)
+    : null;
 
   // Defense records use team abbr as player_id
   if (!sp && playerId.length <= 3 && playerId === playerId.toUpperCase()) {
@@ -50,7 +58,8 @@ export function enrichPlayer(
       games_2025: null,
       note,
       advanced: null,
-      usage: null
+      usage: null,
+      depth: null
     };
   }
 
@@ -82,7 +91,8 @@ export function enrichPlayer(
     games_2025: games,
     note,
     advanced,
-    usage
+    usage,
+    depth
   };
 }
 

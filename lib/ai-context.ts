@@ -1,4 +1,5 @@
 import { LEAGUE_FORMAT, MY_ROSTER_ID, SEASON } from "./constants";
+import { describeDepth } from "./depth-charts";
 import { LEAGUE_INTEL } from "./league-intel";
 import { LeagueBundle } from "./league-service";
 import { EnrichedPlayer, TeamOverview } from "./types";
@@ -95,6 +96,7 @@ function line(p: EnrichedPlayer): string {
     p.fpts_2025 != null ? `${p.fpts_2025} FPTS` : null,
     p.games_2025 != null ? `${p.games_2025}G` : null,
     ...usageBits(p),
+    describeDepth(p.depth),
     p.injury_status ? `inj:${p.injury_status}` : null,
     p.note ? `(${p.note})` : null
   ].filter(Boolean);
@@ -166,6 +168,9 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
   );
   lines.push(
     `Shares are computed vs. that player's own team totals. Snap % is nflverse ${SEASON} regular season.`
+  );
+  lines.push(
+    `- Depth: current NFL depth-chart standing, e.g. "RB2 behind Bijan Robinson (3 deep)". This is live offseason data and reflects 2026 roster moves, so it can contradict ${SEASON} usage — when it does, the depth chart is the forward-looking signal and usage is the backward-looking one. A buried player with strong prior usage is a change-of-situation candidate, not a hold.`
   );
 
   if (bundle.advancedSeason) {
@@ -274,6 +279,11 @@ export const PREBUILT_PROMPTS: Record<
     title: "RB Room (Workload)",
     prompt:
       "Analyze my RB room by workload, not name value. For each RB give carry share, touch share, touches/game and snap share, then classify each as bellcow / committee lead / passing-down back / handcuff / roster clog. Which of my RBs have a workload that justifies a starting lineup spot in 2026, which are trade chips whose name value exceeds their role, and which are cuts?"
+  },
+  depth_risk: {
+    title: "Depth Chart Risk",
+    prompt:
+      "Go through my roster by current NFL depth-chart standing. Flag: (1) players buried behind someone who make my roster for name value only, (2) players whose depth chart improved via 2026 roster moves and are now undervalued holds, (3) any of my starters with a credible threat right behind them. Name the specific player ahead of or behind each one."
   },
   opportunity: {
     title: "Opportunity vs. Production",

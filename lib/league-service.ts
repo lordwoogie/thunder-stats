@@ -2,6 +2,7 @@ import { LEAGUE_MEMBERS } from "./constants";
 import { avgAge, enrichPlayer, sortByPPG } from "./enrich";
 import { getNflAdvancedBySleeper } from "./nflverse";
 import { getSnapSharesBySleeper } from "./snap-counts";
+import { buildDepthRooms } from "./depth-charts";
 import { buildSeasonUsage } from "./usage";
 import { SEASON } from "./constants";
 import {
@@ -51,12 +52,14 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
   // Derived current-season usage: shares computed from Sleeper stats,
   // snap share from nflverse. Covers 2025 until nflverse ships its aggregate.
   const usage = buildSeasonUsage(SEASON, stats, players, snaps);
+  // Depth charts come free with the /players/nfl payload we already fetch.
+  const depthRooms = buildDepthRooms(players);
 
   const teams: TeamOverview[] = rosters.map((r) => {
     const names = teamNameFor(r.owner_id, users);
     const starters = (r.starters ?? [])
       .filter((id) => id && id !== "0")
-      .map((id) => enrichPlayer(id, players, stats, adv, usage));
+      .map((id) => enrichPlayer(id, players, stats, adv, usage, depthRooms));
     const starterIds = new Set(starters.map((p) => p.player_id));
     const taxiIds = new Set(r.taxi ?? []);
     const reserveIds = new Set(r.reserve ?? []);
@@ -65,12 +68,12 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
         (id) =>
           !starterIds.has(id) && !taxiIds.has(id) && !reserveIds.has(id)
       )
-      .map((id) => enrichPlayer(id, players, stats, adv, usage));
+      .map((id) => enrichPlayer(id, players, stats, adv, usage, depthRooms));
     const taxi = (r.taxi ?? []).map((id) =>
-      enrichPlayer(id, players, stats, adv, usage)
+      enrichPlayer(id, players, stats, adv, usage, depthRooms)
     );
     const reserve = (r.reserve ?? []).map((id) =>
-      enrichPlayer(id, players, stats, adv, usage)
+      enrichPlayer(id, players, stats, adv, usage, depthRooms)
     );
 
     const all = [...starters, ...bench, ...taxi, ...reserve];
