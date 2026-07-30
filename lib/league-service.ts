@@ -1,5 +1,6 @@
 import { LEAGUE_MEMBERS } from "./constants";
 import { avgAge, enrichPlayer, sortByPPG } from "./enrich";
+import { getNflAdvancedBySleeper } from "./nflverse";
 import {
   getAllPlayers,
   getLeague,
@@ -13,6 +14,8 @@ export interface LeagueBundle {
   league: Awaited<ReturnType<typeof getLeague>>;
   teams: TeamOverview[];
   fetchedAt: string;
+  /** Season the nflverse advanced stats came from, null if unavailable. */
+  advancedSeason: string | null;
 }
 
 function teamNameFor(
@@ -32,19 +35,21 @@ function teamNameFor(
 }
 
 export async function buildLeagueBundle(): Promise<LeagueBundle> {
-  const [league, rosters, users, players, stats] = await Promise.all([
+  const [league, rosters, users, players, stats, nfl] = await Promise.all([
     getLeague(),
     getRosters(),
     getUsers(),
     getAllPlayers(),
-    getSeasonStats().catch(() => null)
+    getSeasonStats().catch(() => null),
+    getNflAdvancedBySleeper()
   ]);
+  const adv = nfl.bySleeper;
 
   const teams: TeamOverview[] = rosters.map((r) => {
     const names = teamNameFor(r.owner_id, users);
     const starters = (r.starters ?? [])
       .filter((id) => id && id !== "0")
-      .map((id) => enrichPlayer(id, players, stats));
+      .map((id) => enrichPlayer(id, players, stats, adv));
     const starterIds = new Set(starters.map((p) => p.player_id));
     const taxiIds = new Set(r.taxi ?? []);
     const reserveIds = new Set(r.reserve ?? []);
@@ -53,10 +58,12 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
         (id) =>
           !starterIds.has(id) && !taxiIds.has(id) && !reserveIds.has(id)
       )
-      .map((id) => enrichPlayer(id, players, stats));
-    const taxi = (r.taxi ?? []).map((id) => enrichPlayer(id, players, stats));
+      .map((id) => enrichPlayer(id, players, stats, adv));
+    const taxi = (r.taxi ?? []).map((id) =>
+      enrichPlayer(id, players, stats, adv)
+    );
     const reserve = (r.reserve ?? []).map((id) =>
-      enrichPlayer(id, players, stats)
+      enrichPlayer(id, players, stats, adv)
     );
 
     const all = [...starters, ...bench, ...taxi, ...reserve];
@@ -86,7 +93,8 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
   return {
     league,
     teams,
-    fetchedAt: new Date().toISOString()
+    fetchedAt: new Date().toISOString(),
+    advancedSeason: adv.size > 0 ? nfl.season : null
   };
 }
 

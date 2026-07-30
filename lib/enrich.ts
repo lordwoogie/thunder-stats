@@ -1,4 +1,9 @@
-import { EnrichedPlayer, SleeperPlayer, SleeperSeasonStats } from "./types";
+import {
+  EnrichedPlayer,
+  NflAdvancedStat,
+  SleeperPlayer,
+  SleeperSeasonStats
+} from "./types";
 import { PLAYER_NOTES, REF_STATS_BY_ID } from "./reference-stats";
 
 const DEF_NAMES: Record<string, string> = {
@@ -17,11 +22,13 @@ export function enrichPlayer(
   playerId: string,
   playersMap: Record<string, SleeperPlayer>,
   stats: SleeperSeasonStats | null,
+  advancedMap: Map<string, NflAdvancedStat> | null = null,
   gamesPlayed: number | null = null
 ): EnrichedPlayer {
   const sp = playersMap[playerId];
   const ref = REF_STATS_BY_ID[playerId];
   const note = PLAYER_NOTES[playerId] ?? ref?.note ?? null;
+  const advanced = advancedMap?.get(playerId) ?? null;
 
   // Defense records use team abbr as player_id
   if (!sp && playerId.length <= 3 && playerId === playerId.toUpperCase()) {
@@ -38,17 +45,19 @@ export function enrichPlayer(
       fpts_2025: null,
       ppg_2025: null,
       games_2025: null,
-      note
+      note,
+      advanced: null
     };
   }
 
   const statRow = stats?.[playerId];
-  const fpts = statRow?.pts_ppr ?? ref?.fpts_2025 ?? null;
-  const games = statRow?.gp ?? gamesPlayed ?? ref?.games_2025 ?? null;
+  const fpts = statRow?.pts_ppr ?? advanced?.ppr ?? ref?.fpts_2025 ?? null;
+  const games =
+    statRow?.gp ?? advanced?.games ?? gamesPlayed ?? ref?.games_2025 ?? null;
   const ppg =
     fpts != null && games && games > 0
       ? Math.round((fpts / games) * 10) / 10
-      : ref?.ppg_2025 ?? null;
+      : advanced?.ppg ?? ref?.ppg_2025 ?? null;
 
   return {
     player_id: playerId,
@@ -67,7 +76,8 @@ export function enrichPlayer(
     fpts_2025: fpts != null ? Math.round(fpts * 10) / 10 : null,
     ppg_2025: ppg,
     games_2025: games,
-    note
+    note,
+    advanced
   };
 }
 

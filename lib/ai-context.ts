@@ -3,6 +3,36 @@ import { LEAGUE_INTEL } from "./league-intel";
 import { LeagueBundle } from "./league-service";
 import { EnrichedPlayer, TeamOverview } from "./types";
 
+/** Advanced-metric suffix: opportunity + efficiency signals from nflverse. */
+function advancedBits(p: EnrichedPlayer): string[] {
+  const a = p.advanced;
+  if (!a) return [];
+  const bits: string[] = [];
+  const pct = (v: number | null) =>
+    v != null ? `${Math.round(v * 1000) / 10}%` : null;
+
+  if (a.targets != null && a.targets > 0) {
+    bits.push(`${a.targets} tgt`);
+    const ts = pct(a.target_share);
+    if (ts) bits.push(`tgt share ${ts}`);
+    const ays = pct(a.air_yards_share);
+    if (ays) bits.push(`AY share ${ays}`);
+    if (a.wopr != null) bits.push(`WOPR ${a.wopr}`);
+    if (a.racr != null) bits.push(`RACR ${a.racr}`);
+    if (a.receiving_epa != null) bits.push(`rec EPA ${a.receiving_epa}`);
+  }
+  if (a.carries != null && a.carries > 0) {
+    bits.push(`${a.carries} carries`);
+    if (a.rushing_epa != null) bits.push(`rush EPA ${a.rushing_epa}`);
+  }
+  if (a.pass_attempts != null && a.pass_attempts > 0) {
+    bits.push(`${a.pass_attempts} att`);
+    if (a.passing_epa != null) bits.push(`pass EPA ${a.passing_epa}`);
+    if (a.passing_cpoe != null) bits.push(`CPOE ${a.passing_cpoe}`);
+  }
+  return bits;
+}
+
 function line(p: EnrichedPlayer): string {
   const parts = [
     p.name,
@@ -11,6 +41,7 @@ function line(p: EnrichedPlayer): string {
     p.ppg_2025 != null ? `${p.ppg_2025} PPG` : null,
     p.fpts_2025 != null ? `${p.fpts_2025} FPTS` : null,
     p.games_2025 != null ? `${p.games_2025}G` : null,
+    ...advancedBits(p),
     p.injury_status ? `inj:${p.injury_status}` : null,
     p.note ? `(${p.note})` : null
   ].filter(Boolean);
@@ -57,6 +88,34 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
   lines.push(
     `Scoring highlights: 1pt/rec, 0.04/pass yd, 0.1/rush or rec yd, 4pt pass TD, 6pt rush/rec TD, -1 INT, -2 fumble lost.`
   );
+
+  if (bundle.advancedSeason) {
+    lines.push("");
+    lines.push(
+      `Advanced metrics below are ${bundle.advancedSeason} regular-season data from nflverse. Glossary:`
+    );
+    lines.push(
+      `- tgt share: % of team targets. >25% = alpha, 20-25% = strong WR1/2, <15% = volatile.`
+    );
+    lines.push(
+      `- AY share: % of team air yards — measures downfield role and TD equity.`
+    );
+    lines.push(
+      `- WOPR: weighted opportunity rating (1.5*tgt share + 0.7*AY share). >0.7 elite, 0.5-0.7 strong, <0.4 thin.`
+    );
+    lines.push(
+      `- RACR: receiving yards per air yard — efficiency converting targets to yardage.`
+    );
+    lines.push(
+      `- EPA: expected points added (cumulative). Positive = added value over average.`
+    );
+    lines.push(
+      `- CPOE: completion % over expected for QBs. Positive = accurate beyond difficulty.`
+    );
+    lines.push(
+      `Use these to separate OPPORTUNITY from OUTCOME: a player with elite target share but weak PPG is a buy-low (production will follow volume); high PPG on low target share is a sell-high (TD-driven, unsustainable).`
+    );
+  }
   lines.push("");
 
   if (me) {
@@ -82,8 +141,11 @@ export const SYSTEM_PROMPT = `You are a senior dynasty fantasy football analyst 
 Priorities when answering:
 - Think like a dynasty GM: balance win-now vs. future, age curves, draft capital.
 - Use the league context (format, scoring, roster structure) on every answer.
-- When evaluating players, weight 2025 PPG over raw totals, and call out injuries,
+- When evaluating players, weight PPG over raw totals, and call out injuries,
   depth-chart risk, and TD regression candidates.
+- When advanced metrics (target share, WOPR, air-yards share, EPA, CPOE) are
+  present, lead with opportunity over box-score outcome. Cite the specific
+  number when it drives your conclusion — "25% target share" beats "high volume".
 - Be concrete: name specific players and picks. Avoid generic advice.
 - If you suggest a drop, list the players in order of drop priority with one-line reasoning.
 - If you suggest a trade, specify both sides and why each party benefits.
@@ -123,6 +185,16 @@ export const PREBUILT_PROMPTS: Record<
     title: "Rookie Draft Strategy",
     prompt:
       "Based on my roster construction, what positions should I target in the 2026 rookie draft? What is my biggest positional need for year-1 impact, and what is my biggest long-term hole? I hold pick 1.05 — evaluate my rookie board and whether best-RB-available is right there."
+  },
+  opportunity: {
+    title: "Opportunity vs. Production",
+    prompt:
+      "Using target share, air-yards share, WOPR and EPA, find the players on my roster whose OPPORTUNITY outstrips their fantasy production (buy-low / breakout candidates I should hold or acquire more of), and the ones whose production outstrips their opportunity (sell-high, TD-regression risks). Cite the specific metrics."
+  },
+  league_buys: {
+    title: "League-Wide Buy Lows",
+    prompt:
+      "Scan every other roster in the league for players with elite opportunity metrics (high target share, WOPR, or EPA) but mediocre fantasy points — the guys their managers may undervalue. Rank the top 5 acquisition targets, note which roster holds each, and suggest an opening offer for each using my tradeable depth."
   },
   vor: {
     title: "Value Over Replacement",

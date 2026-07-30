@@ -109,6 +109,45 @@ export interface SleeperTransaction {
   }>;
 }
 
+/**
+ * Advanced season stat line sourced from nflverse (see lib/nflverse.ts).
+ * Opportunity/efficiency metrics that Sleeper's own stats endpoint lacks.
+ */
+export interface NflAdvancedStat {
+  season: string;
+  position: string | null;
+  team: string | null;
+  games: number | null;
+  ppr: number | null;
+  ppg: number | null;
+  // passing
+  pass_attempts: number | null;
+  passing_yards: number | null;
+  passing_tds: number | null;
+  interceptions: number | null;
+  passing_epa: number | null;
+  passing_cpoe: number | null;
+  // rushing
+  carries: number | null;
+  rushing_yards: number | null;
+  rushing_tds: number | null;
+  rushing_epa: number | null;
+  // receiving
+  receptions: number | null;
+  targets: number | null;
+  receiving_yards: number | null;
+  receiving_tds: number | null;
+  /** share of team targets, 0–1 */
+  target_share: number | null;
+  /** share of team air yards, 0–1 */
+  air_yards_share: number | null;
+  /** weighted opportunity rating: 1.5*target_share + 0.7*air_yards_share */
+  wopr: number | null;
+  /** receiver air conversion ratio */
+  racr: number | null;
+  receiving_epa: number | null;
+}
+
 export interface EnrichedPlayer {
   player_id: string;
   name: string;
@@ -123,6 +162,8 @@ export interface EnrichedPlayer {
   ppg_2025: number | null;
   games_2025: number | null;
   note: string | null;
+  /** nflverse advanced metrics, null when unmatched or unavailable */
+  advanced: NflAdvancedStat | null;
 }
 
 export interface TeamOverview {
