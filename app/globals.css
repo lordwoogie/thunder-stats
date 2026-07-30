@@ -1,0 +1,148 @@
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0a0e1a;
+  color: #f0f4ff;
+  font-family: "Barlow", system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: "Oswald", system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.font-cond {
+  font-family: "Barlow Condensed", system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.card {
+  background: #111827;
+  border: 1px solid rgba(0, 122, 193, 0.18);
+  border-radius: 12px;
+}
+
+.card-alt {
+  background: #1a2236;
+  border: 1px solid rgba(0, 122, 193, 0.22);
+  border-radius: 12px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 9999px;
+  font-family: "Barlow Condensed", system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.brand-bar {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #007ac1,
+    #ef6100,
+    transparent
+  );
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007ac1, #0095e8);
+  color: white;
+  font-family: "Oswald", system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 22px rgba(0, 122, 193, 0.35);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  background: #1a2236;
+  color: #f0f4ff;
+  font-family: "Oswald", system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  border: 1px solid rgba(0, 122, 193, 0.25);
+  transition: all 0.15s ease;
+}
+.btn-ghost:hover {
+  border-color: #007ac1;
+  background: #223049;
+}
+
+.text-muted {
+  color: #8b9dc3;
+}
+.text-dim {
+  color: #4a5578;
+}
+
+/* table */
+.tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.tbl th,
+.tbl td {
+  padding: 0.55rem 0.8rem;
+  text-align: left;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(0, 122, 193, 0.08);
+}
+.tbl th {
+  font-family: "Barlow Condensed", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: #8b9dc3;
+  background: #1a2236;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.tbl tbody tr:hover {
+  background: rgba(0, 122, 193, 0.06);
+}
+
+/* markdown-ish */
+.prose-ai {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
