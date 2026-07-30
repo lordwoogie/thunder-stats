@@ -11,6 +11,13 @@ const LINKS = [
   { href: "/trade", label: "Trade Analyzer" }
 ];
 
+// Standalone static apps served from public/ — outside the Next router,
+// so these need plain anchors to force a full page load.
+const STATIC_APPS = [
+  { href: "/lottery", label: "Lottery" },
+  { href: "/thunder", label: "Thunder" }
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   return (
@@ -42,6 +49,19 @@ export default function Navbar() {
               </Link>
             );
           })}
+          <span
+            aria-hidden
+            className="hidden md:block w-px self-stretch my-1 bg-[rgba(0,122,193,0.25)] mx-1"
+          />
+          {STATIC_APPS.map((a) => (
+            <a
+              key={a.href}
+              href={a.href}
+              className="px-3 md:px-4 py-2 rounded-lg font-cond text-sm uppercase tracking-wider text-dim hover:text-white hover:bg-bg-alt border border-transparent transition-colors"
+            >
+              {a.label}
+            </a>
+          ))}
         </nav>
       </div>
       <div className="brand-bar h-[2px] opacity-60" />

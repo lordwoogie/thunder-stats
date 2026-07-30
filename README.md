@@ -60,7 +60,16 @@ For multi-region production, swap the `Map` in `lib/sleeper.ts` for Redis.
    `NEXT_PUBLIC_SLEEPER_LEAGUE_ID`, `NEXT_PUBLIC_MY_USER_ID`,
    `NEXT_PUBLIC_MY_ROSTER_ID`, `ANTHROPIC_MODEL`.
 
-## Legacy
+## Standalone apps
 
-The prior Thunder basketball stats display lives at `/thunder.html` (served
-statically from `public/`).
+Two single-file apps predate this Next app and are preserved as static
+files in `public/`, reachable from the nav:
+
+| Route | What it is |
+|-------|------------|
+| `/lottery` | C_OKC Dynasty draft lottery simulator |
+| `/thunder` | Thunder basketball live stats display |
+
+`next.config.mjs` rewrites the extensionless routes to the underlying
+`.html` files. The original `/lottery.html` and `/thunder.html` paths also
+still resolve, so any existing links keep working.
