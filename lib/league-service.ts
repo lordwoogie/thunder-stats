@@ -1,6 +1,9 @@
 import { LEAGUE_MEMBERS } from "./constants";
 import { avgAge, enrichPlayer, sortByPPG } from "./enrich";
 import { getNflAdvancedBySleeper } from "./nflverse";
+import { getSnapSharesBySleeper } from "./snap-counts";
+import { buildSeasonUsage } from "./usage";
+import { SEASON } from "./constants";
 import {
   getAllPlayers,
   getLeague,
@@ -35,21 +38,25 @@ function teamNameFor(
 }
 
 export async function buildLeagueBundle(): Promise<LeagueBundle> {
-  const [league, rosters, users, players, stats, nfl] = await Promise.all([
+  const [league, rosters, users, players, stats, nfl, snaps] = await Promise.all([
     getLeague(),
     getRosters(),
     getUsers(),
     getAllPlayers(),
     getSeasonStats().catch(() => null),
-    getNflAdvancedBySleeper()
+    getNflAdvancedBySleeper(),
+    getSnapSharesBySleeper()
   ]);
   const adv = nfl.bySleeper;
+  // Derived current-season usage: shares computed from Sleeper stats,
+  // snap share from nflverse. Covers 2025 until nflverse ships its aggregate.
+  const usage = buildSeasonUsage(SEASON, stats, players, snaps);
 
   const teams: TeamOverview[] = rosters.map((r) => {
     const names = teamNameFor(r.owner_id, users);
     const starters = (r.starters ?? [])
       .filter((id) => id && id !== "0")
-      .map((id) => enrichPlayer(id, players, stats, adv));
+      .map((id) => enrichPlayer(id, players, stats, adv, usage));
     const starterIds = new Set(starters.map((p) => p.player_id));
     const taxiIds = new Set(r.taxi ?? []);
     const reserveIds = new Set(r.reserve ?? []);
@@ -58,12 +65,12 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
         (id) =>
           !starterIds.has(id) && !taxiIds.has(id) && !reserveIds.has(id)
       )
-      .map((id) => enrichPlayer(id, players, stats, adv));
+      .map((id) => enrichPlayer(id, players, stats, adv, usage));
     const taxi = (r.taxi ?? []).map((id) =>
-      enrichPlayer(id, players, stats, adv)
+      enrichPlayer(id, players, stats, adv, usage)
     );
     const reserve = (r.reserve ?? []).map((id) =>
-      enrichPlayer(id, players, stats, adv)
+      enrichPlayer(id, players, stats, adv, usage)
     );
 
     const all = [...starters, ...bench, ...taxi, ...reserve];

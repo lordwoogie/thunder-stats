@@ -1,7 +1,60 @@
-import { LEAGUE_FORMAT, MY_ROSTER_ID } from "./constants";
+import { LEAGUE_FORMAT, MY_ROSTER_ID, SEASON } from "./constants";
 import { LEAGUE_INTEL } from "./league-intel";
 import { LeagueBundle } from "./league-service";
 import { EnrichedPlayer, TeamOverview } from "./types";
+
+const pctStr = (v: number | null | undefined) =>
+  v != null ? `${Math.round(v * 1000) / 10}%` : null;
+
+/**
+ * Current-season (2025) usage, tailored per position — the numbers that
+ * actually drive decisions differ sharply between QB, RB and pass catchers.
+ */
+function usageBits(p: EnrichedPlayer): string[] {
+  const u = p.usage;
+  if (!u) return [];
+  const bits: string[] = [];
+  const pos = (u.position ?? p.position ?? "").toUpperCase();
+
+  if (pos === "QB") {
+    if (u.pass_attempts) bits.push(`${u.pass_attempts} att`);
+    if (u.pass_attempts_per_game) bits.push(`${u.pass_attempts_per_game} att/g`);
+    const cp = pctStr(u.completion_pct);
+    if (cp) bits.push(`comp ${cp}`);
+    if (u.yards_per_attempt) bits.push(`${u.yards_per_attempt} Y/A`);
+    if (u.passing_tds != null) bits.push(`${u.passing_tds} pass TD`);
+    if (u.interceptions != null) bits.push(`${u.interceptions} INT`);
+    // rushing production is the single biggest QB differentiator in superflex
+    if (u.carries) bits.push(`${u.carries} rush att`);
+    if (u.rushing_yards) bits.push(`${u.rushing_yards} rush yd`);
+    if (u.rushing_tds) bits.push(`${u.rushing_tds} rush TD`);
+    if (u.rush_yards_per_game) bits.push(`${u.rush_yards_per_game} rush yd/g`);
+  } else if (pos === "RB") {
+    if (u.carries) bits.push(`${u.carries} carries`);
+    const cs = pctStr(u.carry_share);
+    if (cs) bits.push(`carry share ${cs}`);
+    if (u.yards_per_carry) bits.push(`${u.yards_per_carry} YPC`);
+    if (u.targets) bits.push(`${u.targets} tgt`);
+    if (u.receptions) bits.push(`${u.receptions} rec`);
+    const ts = pctStr(u.touch_share);
+    if (ts) bits.push(`touch share ${ts}`);
+    if (u.touches_per_game) bits.push(`${u.touches_per_game} touch/g`);
+    const ss = pctStr(u.snap_share);
+    if (ss) bits.push(`snap ${ss}`);
+  } else {
+    // WR / TE
+    if (u.targets) bits.push(`${u.targets} tgt`);
+    const ts = pctStr(u.target_share);
+    if (ts) bits.push(`tgt share ${ts}`);
+    if (u.targets_per_game) bits.push(`${u.targets_per_game} tgt/g`);
+    const cr = pctStr(u.catch_rate);
+    if (cr) bits.push(`catch ${cr}`);
+    if (u.yards_per_target) bits.push(`${u.yards_per_target} Y/tgt`);
+    const ss = pctStr(u.snap_share);
+    if (ss) bits.push(`snap ${ss}`);
+  }
+  return bits;
+}
 
 /** Advanced-metric suffix: opportunity + efficiency signals from nflverse. */
 function advancedBits(p: EnrichedPlayer): string[] {
@@ -41,11 +94,20 @@ function line(p: EnrichedPlayer): string {
     p.ppg_2025 != null ? `${p.ppg_2025} PPG` : null,
     p.fpts_2025 != null ? `${p.fpts_2025} FPTS` : null,
     p.games_2025 != null ? `${p.games_2025}G` : null,
-    ...advancedBits(p),
+    ...usageBits(p),
     p.injury_status ? `inj:${p.injury_status}` : null,
     p.note ? `(${p.note})` : null
   ].filter(Boolean);
-  return `  - ${parts.join(", ")}`;
+
+  // Prior-season advanced metrics are a different year — label them so the
+  // model never blends them with current-season usage above.
+  const adv = advancedBits(p);
+  const advStr =
+    adv.length > 0 && p.advanced
+      ? ` [${p.advanced.season}: ${adv.join(", ")}]`
+      : "";
+
+  return `  - ${parts.join(", ")}${advStr}`;
 }
 
 function teamSection(team: TeamOverview, isMe: boolean): string {
@@ -89,10 +151,27 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
     `Scoring highlights: 1pt/rec, 0.04/pass yd, 0.1/rush or rec yd, 4pt pass TD, 6pt rush/rec TD, -1 INT, -2 fumble lost.`
   );
 
+  lines.push("");
+  lines.push(
+    `Player lines carry ${SEASON} usage metrics, position-specific. Glossary:`
+  );
+  lines.push(
+    `- QB: att/g (volume), comp % , Y/A (efficiency), and rushing volume — rushing production is the biggest QB separator in Superflex, weight it heavily.`
+  );
+  lines.push(
+    `- RB: carry share (% of team carries; >55% = true bellcow, 35-55% = committee lead, <25% = backup), touch share, touch/g, and snap % (<40% = rotational, >65% = every-down). A pass-catching RB with low carry share can still be a PPR RB1.`
+  );
+  lines.push(
+    `- WR/TE: tgt share (>25% = alpha, 20-25% = strong WR1/2, <15% = volatile), tgt/g, catch %, Y/tgt, snap %.`
+  );
+  lines.push(
+    `Shares are computed vs. that player's own team totals. Snap % is nflverse ${SEASON} regular season.`
+  );
+
   if (bundle.advancedSeason) {
     lines.push("");
     lines.push(
-      `Advanced metrics below are ${bundle.advancedSeason} regular-season data from nflverse. Glossary:`
+      `Bracketed [${bundle.advancedSeason}: ...] segments are PRIOR-season nflverse advanced metrics — a different year from the ${SEASON} figures above. Do not blend the two; use them for trajectory (improving vs. declining). Glossary:`
     );
     lines.push(
       `- tgt share: % of team targets. >25% = alpha, 20-25% = strong WR1/2, <15% = volatile.`
@@ -185,6 +264,16 @@ export const PREBUILT_PROMPTS: Record<
     title: "Rookie Draft Strategy",
     prompt:
       "Based on my roster construction, what positions should I target in the 2026 rookie draft? What is my biggest positional need for year-1 impact, and what is my biggest long-term hole? I hold pick 1.05 — evaluate my rookie board and whether best-RB-available is right there."
+  },
+  qb_room: {
+    title: "QB Room (Superflex)",
+    prompt:
+      "Analyze my QB room for a Superflex league. For each QB: attempts/game, completion %, Y/A, and especially rushing volume. Who is my locked-in QB1 and QB2 for 2026, who is expendable, and am I one injury away from a hole? Given Superflex scarcity, should I be acquiring another starting-caliber QB, and who in the league is gettable?"
+  },
+  rb_room: {
+    title: "RB Room (Workload)",
+    prompt:
+      "Analyze my RB room by workload, not name value. For each RB give carry share, touch share, touches/game and snap share, then classify each as bellcow / committee lead / passing-down back / handcuff / roster clog. Which of my RBs have a workload that justifies a starting lineup spot in 2026, which are trade chips whose name value exceeds their role, and which are cuts?"
   },
   opportunity: {
     title: "Opportunity vs. Production",

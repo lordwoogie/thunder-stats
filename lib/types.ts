@@ -162,8 +162,10 @@ export interface EnrichedPlayer {
   ppg_2025: number | null;
   games_2025: number | null;
   note: string | null;
-  /** nflverse advanced metrics, null when unmatched or unavailable */
+  /** nflverse advanced metrics (prior complete season), null when unmatched */
   advanced: NflAdvancedStat | null;
+  /** current-season derived usage: shares, rates, snap share */
+  usage: import("./usage").SeasonUsage | null;
 }
 
 export interface TeamOverview {

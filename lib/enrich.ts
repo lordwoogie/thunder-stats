@@ -5,6 +5,7 @@ import {
   SleeperSeasonStats
 } from "./types";
 import { PLAYER_NOTES, REF_STATS_BY_ID } from "./reference-stats";
+import type { SeasonUsage } from "./usage";
 
 const DEF_NAMES: Record<string, string> = {
   CLE: "Cleveland Browns",
@@ -23,12 +24,14 @@ export function enrichPlayer(
   playersMap: Record<string, SleeperPlayer>,
   stats: SleeperSeasonStats | null,
   advancedMap: Map<string, NflAdvancedStat> | null = null,
+  usageMap: Map<string, SeasonUsage> | null = null,
   gamesPlayed: number | null = null
 ): EnrichedPlayer {
   const sp = playersMap[playerId];
   const ref = REF_STATS_BY_ID[playerId];
   const note = PLAYER_NOTES[playerId] ?? ref?.note ?? null;
   const advanced = advancedMap?.get(playerId) ?? null;
+  const usage = usageMap?.get(playerId) ?? null;
 
   // Defense records use team abbr as player_id
   if (!sp && playerId.length <= 3 && playerId === playerId.toUpperCase()) {
@@ -46,7 +49,8 @@ export function enrichPlayer(
       ppg_2025: null,
       games_2025: null,
       note,
-      advanced: null
+      advanced: null,
+      usage: null
     };
   }
 
@@ -77,7 +81,8 @@ export function enrichPlayer(
     ppg_2025: ppg,
     games_2025: games,
     note,
-    advanced
+    advanced,
+    usage
   };
 }
 

@@ -20,12 +20,12 @@ const CROSSWALK_URL =
 const NFLVERSE_STATS_BASE =
   "https://github.com/nflverse/nflverse-data/releases/download/player_stats";
 
-const DAY = 24 * 60 * 60 * 1000;
+export const DAY = 24 * 60 * 60 * 1000;
 
 type CacheEntry<T> = { value: T; expires: number };
 const cache = new Map<string, CacheEntry<unknown>>();
 
-async function cachedText(url: string, ttlMs: number): Promise<string> {
+export async function cachedText(url: string, ttlMs: number): Promise<string> {
   const hit = cache.get(url);
   const now = Date.now();
   if (hit && hit.expires > now) return hit.value as string;
@@ -73,7 +73,7 @@ function parseCsvLine(line: string): string[] {
   return out;
 }
 
-function parseCsv(text: string): { header: string[]; rows: string[][] } {
+export function parseCsv(text: string): { header: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
   if (lines.length === 0) return { header: [], rows: [] };
   const header = parseCsvLine(lines[0]);
@@ -97,13 +97,54 @@ function round(n: number | null, dp = 1): number | null {
 
 /* --------------------------- crosswalk --------------------------- */
 
-interface CrosswalkEntry {
+export interface CrosswalkEntry {
   sleeper_id: string;
   gsis_id: string;
+  pfr_id: string | null;
   ktc_id: string | null;
   merge_name: string;
   position: string;
   team: string;
+}
+
+/**
+ * All crosswalk rows that have a sleeper_id, regardless of whether a
+ * gsis_id is present. Use this when joining on pfr_id (snap counts);
+ * use getCrosswalk() when joining on gsis_id (nflverse stats).
+ */
+export async function getCrosswalkRaw(): Promise<CrosswalkEntry[]> {
+  const text = await cachedText(CROSSWALK_URL, DAY);
+  const { header, rows } = parseCsv(text);
+  const idx = (name: string) => header.indexOf(name);
+  const iSleeper = idx("sleeper_id");
+  const iGsis = idx("gsis_id");
+  const iPfr = idx("pfr_id");
+  const iKtc = idx("ktc_id");
+  const iMerge = idx("merge_name");
+  const iName = idx("name");
+  const iPos = idx("position");
+  const iTeam = idx("team");
+
+  const clean = (v: string | undefined) => {
+    const t = v?.trim();
+    return t && t !== "NA" ? t : null;
+  };
+
+  const out: CrosswalkEntry[] = [];
+  for (const r of rows) {
+    const sleeper = clean(r[iSleeper]);
+    if (!sleeper) continue;
+    out.push({
+      sleeper_id: sleeper,
+      gsis_id: clean(r[iGsis]) ?? "",
+      pfr_id: clean(r[iPfr]),
+      ktc_id: clean(r[iKtc]),
+      merge_name: (r[iMerge] ?? r[iName] ?? "").trim(),
+      position: r[iPos]?.trim() ?? "",
+      team: r[iTeam]?.trim() ?? ""
+    });
+  }
+  return out;
 }
 
 /** Map of Sleeper player_id → crosswalk entry. */
@@ -113,6 +154,7 @@ export async function getCrosswalk(): Promise<Map<string, CrosswalkEntry>> {
   const idx = (name: string) => header.indexOf(name);
   const iSleeper = idx("sleeper_id");
   const iGsis = idx("gsis_id");
+  const iPfr = idx("pfr_id");
   const iKtc = idx("ktc_id");
   const iMerge = idx("merge_name");
   const iName = idx("name");
@@ -127,6 +169,7 @@ export async function getCrosswalk(): Promise<Map<string, CrosswalkEntry>> {
     map.set(sleeper, {
       sleeper_id: sleeper,
       gsis_id: gsis,
+      pfr_id: r[iPfr] && r[iPfr] !== "NA" ? r[iPfr] : null,
       ktc_id: r[iKtc] && r[iKtc] !== "NA" ? r[iKtc] : null,
       merge_name: (r[iMerge] ?? r[iName] ?? "").trim(),
       position: r[iPos]?.trim() ?? "",
