@@ -1,5 +1,6 @@
 "use client";
 
+import { streamAI } from "@/lib/ai-client";
 import { useMemo, useState } from "react";
 
 export interface TradePlayer {
@@ -160,21 +161,18 @@ export default function TradeForm({
     setError("");
     setResult("");
     try {
-      const res = await fetch("/api/ai/trade", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      await streamAI(
+        "/api/ai/trade",
+        {
           my_side: mySide.map((a) => a.label).join(", "),
           their_side: theirSide.map((a) => a.label).join(", "),
           their_team: theirTeam
             ? `${theirTeam.team_name} (${theirTeam.display_name})`
             : undefined,
           notes: notes || undefined
-        })
-      });
-      const data = (await res.json()) as { text?: string; error?: string };
-      if (!res.ok) setError(data.error ?? `HTTP ${res.status}`);
-      else setResult(data.text ?? "");
+        },
+        setResult
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
     } finally {
@@ -271,9 +269,11 @@ export default function TradeForm({
         <h2 className="font-display text-lg text-brand-orange mb-3">
           AI Verdict
         </h2>
-        {loading && (
+        {/* Only shown until the first token lands — after that the text
+            itself is the progress indicator. */}
+        {loading && !result && (
           <div className="text-muted font-cond uppercase tracking-wider text-sm">
-            Asking Claude…
+            Loading league data…
           </div>
         )}
         {error && (
@@ -287,8 +287,11 @@ export default function TradeForm({
             Pick a team, choose both sides, then hit Evaluate.
           </div>
         )}
-        {!loading && !error && result && (
-          <div className="prose-ai text-ink">{result}</div>
+        {result && (
+          <div className="prose-ai text-ink whitespace-pre-wrap">
+            {result}
+            {loading && <span className="animate-pulse text-brand-blue">▍</span>}
+          </div>
         )}
       </section>
     </div>

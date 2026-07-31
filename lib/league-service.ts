@@ -5,6 +5,7 @@ import { getSnapSharesBySleeper } from "./snap-counts";
 import { buildDepthRooms } from "./depth-charts";
 import { getDynastyRanks, getProjections } from "./fantasypros";
 import { buildSeasonUsage } from "./usage";
+import { withTimeout } from "./with-timeout";
 import { SEASON } from "./constants";
 import { buildPickInventory } from "./draft-picks";
 import {
@@ -54,17 +55,26 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
     projections,
     tradedPicks
   ] = await Promise.all([
+    // Core — the app has nothing to show without these.
     getLeague(),
     getRosters(),
     getUsers(),
     getAllPlayers(),
-    getSeasonStats().catch(() => null),
-    getNflAdvancedBySleeper(),
-    getSnapSharesBySleeper(),
-    getDynastyRanks(),
-    getProjections(),
-    // Non-fatal: without it every roster simply shows its own untraded picks.
-    getTradedPicks().catch(() => [])
+    // Enrichment — each is bounded so one slow source can't push an AI
+    // request past the 60s function ceiling. Degrading to less context beats
+    // returning no answer at all.
+    withTimeout(getSeasonStats(), 8000, null, "sleeper season stats"),
+    withTimeout(
+      getNflAdvancedBySleeper(),
+      10000,
+      { season: SEASON, bySleeper: new Map() },
+      "nflverse advanced"
+    ),
+    withTimeout(getSnapSharesBySleeper(), 8000, null, "snap counts"),
+    withTimeout(getDynastyRanks(), 6000, new Map(), "fantasypros ranks"),
+    withTimeout(getProjections(), 6000, new Map(), "fantasypros projections"),
+    // Without it every roster simply shows its own untraded picks.
+    withTimeout(getTradedPicks(), 5000, [], "traded picks")
   ]);
   const adv = nfl.bySleeper;
   // Derived current-season usage. Sleeper supplies official volume and PPR
