@@ -3,6 +3,7 @@ import {
   SleeperMatchup,
   SleeperPlayers,
   SleeperRoster,
+  SleeperTradedPick,
   SleeperTransaction,
   SleeperUser,
   SleeperSeasonStats
@@ -61,6 +62,16 @@ export async function getLeague(leagueId = LEAGUE_ID): Promise<SleeperLeague> {
 
 export async function getRosters(leagueId = LEAGUE_ID): Promise<SleeperRoster[]> {
   return fetchJson(`/league/${leagueId}/rosters`, TTL.rosters);
+}
+
+/**
+ * Picks that have changed hands. Sleeper only reports the deltas — every
+ * pick not listed here is still held by whoever it originated with.
+ */
+export async function getTradedPicks(
+  leagueId = LEAGUE_ID
+): Promise<SleeperTradedPick[]> {
+  return fetchJson(`/league/${leagueId}/traded_picks`, TTL.rosters);
 }
 
 export async function getUsers(leagueId = LEAGUE_ID): Promise<SleeperUser[]> {
