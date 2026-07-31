@@ -92,6 +92,8 @@ function QbTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Rush yards">RU YD</Th>
               <Th title="Rush TDs">RU TD</Th>
               <Th title="Snap share">SNAP%</Th>
+              <Th title="FantasyPros dynasty superflex ECR">DYN</Th>
+              <Th title="Projected PPR points, upcoming season">PROJ</Th>
               <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
@@ -127,6 +129,17 @@ function QbTable({ players }: { players: EnrichedPlayer[] }) {
                     {u?.rushing_tds ?? "—"}
                   </td>
                   <td className="text-muted">{pct(u?.snap_share)}</td>
+                  <td className="text-xs text-muted">
+                    {p.rank?.ecr != null ? `#${p.rank.ecr}` : "—"}
+                    {p.rank?.pos_rank ? (
+                      <span className="text-dim"> {p.rank.pos_rank}</span>
+                    ) : null}
+                  </td>
+                  <td className="font-display text-sky-300">
+                    {p.projection?.points_ppr != null
+                      ? p.projection.points_ppr.toFixed(0)
+                      : "—"}
+                  </td>
                   <DepthCell p={p} />
                 </tr>
               );
@@ -167,6 +180,8 @@ function RbTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Snap share">SNAP%</Th>
               <Th title="Carries inside the 20">RZ CAR</Th>
               <Th title="Touches inside the 10 — goal-line role">I10</Th>
+              <Th title="FantasyPros dynasty superflex ECR">DYN</Th>
+              <Th title="Projected PPR points, upcoming season">PROJ</Th>
               <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
@@ -207,6 +222,17 @@ function RbTable({ players }: { players: EnrichedPlayer[] }) {
                   </td>
                   <td className={tone(p.advanced?.i10_opportunities, 18, 5)}>
                     {p.advanced?.i10_opportunities ?? "—"}
+                  </td>
+                  <td className="text-xs text-muted">
+                    {p.rank?.ecr != null ? `#${p.rank.ecr}` : "—"}
+                    {p.rank?.pos_rank ? (
+                      <span className="text-dim"> {p.rank.pos_rank}</span>
+                    ) : null}
+                  </td>
+                  <td className="font-display text-sky-300">
+                    {p.projection?.points_ppr != null
+                      ? p.projection.points_ppr.toFixed(0)
+                      : "—"}
                   </td>
                   <DepthCell p={p} />
                 </tr>
@@ -250,6 +276,8 @@ function PassCatcherTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Weighted Opportunity Rating">WOPR</Th>
               <Th title="Targets inside the 20">RZ TGT</Th>
               <Th title="Touches inside the 10 — goal-line role">I10</Th>
+              <Th title="FantasyPros dynasty superflex ECR">DYN</Th>
+              <Th title="Projected PPR points, upcoming season">PROJ</Th>
               <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
@@ -296,6 +324,17 @@ function PassCatcherTable({ players }: { players: EnrichedPlayer[] }) {
                   </td>
                   <td className={tone(p.advanced?.i10_opportunities, 8, 2)}>
                     {p.advanced?.i10_opportunities ?? "—"}
+                  </td>
+                  <td className="text-xs text-muted">
+                    {p.rank?.ecr != null ? `#${p.rank.ecr}` : "—"}
+                    {p.rank?.pos_rank ? (
+                      <span className="text-dim"> {p.rank.pos_rank}</span>
+                    ) : null}
+                  </td>
+                  <td className="font-display text-sky-300">
+                    {p.projection?.points_ppr != null
+                      ? p.projection.points_ppr.toFixed(0)
+                      : "—"}
                   </td>
                   <DepthCell p={p} />
                 </tr>
