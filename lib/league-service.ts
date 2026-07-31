@@ -53,9 +53,10 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
     getProjections()
   ]);
   const adv = nfl.bySleeper;
-  // Derived current-season usage: shares computed from Sleeper stats,
-  // snap share from nflverse. Covers 2025 until nflverse ships its aggregate.
-  const usage = buildSeasonUsage(SEASON, stats, players, snaps);
+  // Derived current-season usage. Sleeper supplies official volume and PPR
+  // points; the committed play-by-play aggregate supplies opportunity shares
+  // and backfills volume, so the stats page still renders if Sleeper is down.
+  const usage = buildSeasonUsage(SEASON, stats, players, snaps, adv);
   // Depth charts come free with the /players/nfl payload we already fetch.
   const depthRooms = buildDepthRooms(players);
 
