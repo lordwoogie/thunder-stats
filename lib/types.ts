@@ -146,6 +146,17 @@ export interface NflAdvancedStat {
   /** receiver air conversion ratio */
   racr: number | null;
   receiving_epa: number | null;
+  /** share of team carries, 0–1 */
+  carry_share?: number | null;
+  // Red-zone opportunity — TD equity, the signal raw TD totals hide.
+  /** targets inside the 20 */
+  rz_targets?: number | null;
+  /** carries inside the 20 */
+  rz_carries?: number | null;
+  /** targets + carries inside the 20 */
+  rz_opportunities?: number | null;
+  /** targets + carries inside the 10 */
+  i10_opportunities?: number | null;
 }
 
 export interface EnrichedPlayer {

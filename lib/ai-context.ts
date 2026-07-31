@@ -74,16 +74,19 @@ function advancedBits(p: EnrichedPlayer): string[] {
     if (a.wopr != null) bits.push(`WOPR ${a.wopr}`);
     if (a.racr != null) bits.push(`RACR ${a.racr}`);
     if (a.receiving_epa != null) bits.push(`rec EPA ${a.receiving_epa}`);
+    if (a.rz_targets != null) bits.push(`${a.rz_targets} RZ tgt`);
   }
   if (a.carries != null && a.carries > 0) {
     bits.push(`${a.carries} carries`);
     if (a.rushing_epa != null) bits.push(`rush EPA ${a.rushing_epa}`);
+    if (a.rz_carries != null) bits.push(`${a.rz_carries} RZ car`);
   }
   if (a.pass_attempts != null && a.pass_attempts > 0) {
     bits.push(`${a.pass_attempts} att`);
     if (a.passing_epa != null) bits.push(`pass EPA ${a.passing_epa}`);
     if (a.passing_cpoe != null) bits.push(`CPOE ${a.passing_cpoe}`);
   }
+  if (a.i10_opportunities != null) bits.push(`${a.i10_opportunities} inside-10`);
   return bits;
 }
 
@@ -176,7 +179,9 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
   if (bundle.advancedSeason) {
     lines.push("");
     lines.push(
-      `Bracketed [${bundle.advancedSeason}: ...] segments are PRIOR-season nflverse advanced metrics — a different year from the ${SEASON} figures above. Do not blend the two; use them for trajectory (improving vs. declining). Glossary:`
+      bundle.advancedSeason === SEASON
+        ? `Bracketed [${bundle.advancedSeason}: ...] segments are advanced metrics for the SAME ${SEASON} season, aggregated from nflverse play-by-play. Same year as the figures above — read them together. Glossary:`
+        : `Bracketed [${bundle.advancedSeason}: ...] segments are PRIOR-season advanced metrics — a different year from the ${SEASON} figures above. Do not blend the two; use them for trajectory (improving vs. declining). Glossary:`
     );
     lines.push(
       `- tgt share: % of team targets. >25% = alpha, 20-25% = strong WR1/2, <15% = volatile.`
@@ -195,6 +200,12 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
     );
     lines.push(
       `- CPOE: completion % over expected for QBs. Positive = accurate beyond difficulty.`
+    );
+    lines.push(
+      `- RZ tgt / RZ car: targets or carries inside the 20. Inside-10: touches inside the 10 — the goal-line role.`
+    );
+    lines.push(
+      `TD REGRESSION IS THE KEY READ: red-zone volume predicts future TDs far better than past TDs do. A player with heavy RZ and inside-10 volume but few actual TDs is a strong BUY — the scores are coming. The reverse (few RZ looks, many TDs) is a SELL. Always cite the RZ numbers when arguing either case.`
     );
     lines.push(
       `Use these to separate OPPORTUNITY from OUTCOME: a player with elite target share but weak PPG is a buy-low (production will follow volume); high PPG on low target share is a sell-high (TD-driven, unsustainable).`

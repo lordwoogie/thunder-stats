@@ -12,6 +12,17 @@
 
 import { SEASON } from "./constants";
 import { NflAdvancedStat } from "./types";
+import seasonStats2025 from "../data/season-stats-2025.json";
+
+interface PrecomputedFile {
+  season: string;
+  players: Record<string, Record<string, number | string | null>>;
+}
+
+/** Seasons we have a committed play-by-play aggregate for. */
+const PRECOMPUTED: Record<string, PrecomputedFile> = {
+  "2025": seasonStats2025 as unknown as PrecomputedFile
+};
 
 const CROSSWALK_URL =
   "https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv";
@@ -285,24 +296,80 @@ export interface NflverseBundle {
 }
 
 /**
+ * Precomputed current-season stats, aggregated from nflverse play-by-play by
+ * scripts/build-season-stats.mjs and committed to the repo. nflverse publishes
+ * PBP months before the season aggregate, so this keeps us on the current
+ * season instead of trailing a year — and adds red-zone opportunity, which
+ * their aggregate doesn't carry at all.
+ */
+function loadPrecomputed(season: string): Map<string, NflAdvancedStat> | null {
+  const file = PRECOMPUTED[season];
+  if (!file) return null;
+  const map = new Map<string, NflAdvancedStat>();
+  for (const [gsis, raw] of Object.entries(file.players)) {
+    const s = raw as Record<string, number | null>;
+    map.set(gsis, {
+      season,
+      position: null,
+      team: (raw.team as string | null) ?? null,
+      games: s.games ?? null,
+      ppr: null,
+      ppg: null,
+      pass_attempts: s.pass_attempts ?? null,
+      passing_yards: s.passing_yards ?? null,
+      passing_tds: s.passing_tds ?? null,
+      interceptions: s.interceptions ?? null,
+      passing_epa: s.passing_epa ?? null,
+      passing_cpoe: s.passing_cpoe ?? null,
+      carries: s.carries ?? null,
+      rushing_yards: s.rushing_yards ?? null,
+      rushing_tds: s.rushing_tds ?? null,
+      rushing_epa: s.rushing_epa ?? null,
+      receptions: s.receptions ?? null,
+      targets: s.targets ?? null,
+      receiving_yards: s.receiving_yards ?? null,
+      receiving_tds: s.receiving_tds ?? null,
+      target_share: s.target_share ?? null,
+      air_yards_share: s.air_yards_share ?? null,
+      wopr: s.wopr ?? null,
+      racr: s.racr ?? null,
+      receiving_epa: s.receiving_epa ?? null,
+      carry_share: s.carry_share ?? null,
+      rz_targets: s.rz_targets ?? null,
+      rz_carries: s.rz_carries ?? null,
+      rz_opportunities: s.rz_opportunities ?? null,
+      i10_opportunities: s.i10_opportunities ?? null
+    });
+  }
+  return map;
+}
+
+/**
  * Join crosswalk + season stats into a Sleeper-keyed advanced-stats map.
- * Returns an empty map (never throws) if nflverse is unreachable so the
- * caller can degrade gracefully.
+ *
+ * Prefers the precomputed current-season file; falls back to nflverse's own
+ * aggregate (which lags a season) only when no precomputed data exists.
+ * Never throws — returns an empty map so callers degrade gracefully.
  */
 export async function getNflAdvancedBySleeper(
   season = SEASON
 ): Promise<NflverseBundle> {
   try {
+    const precomputed = loadPrecomputed(season);
     const [crosswalk, seasonStats] = await Promise.all([
       getCrosswalk(),
-      getSeasonStatsByGsis(season)
+      precomputed ? Promise.resolve(null) : getSeasonStatsByGsis(season)
     ]);
+
+    const byGsis = precomputed ?? seasonStats!.stats;
+    const usedSeason = precomputed ? season : seasonStats!.season;
+
     const bySleeper = new Map<string, NflAdvancedStat>();
     for (const [sleeperId, entry] of crosswalk) {
-      const stat = seasonStats.stats.get(entry.gsis_id);
+      const stat = byGsis.get(entry.gsis_id);
       if (stat) bySleeper.set(sleeperId, stat);
     }
-    return { season: seasonStats.season, bySleeper };
+    return { season: usedSeason, bySleeper };
   } catch {
     return { season, bySleeper: new Map() };
   }
