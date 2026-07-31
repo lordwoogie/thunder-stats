@@ -8,7 +8,7 @@ season stats, and uses Claude (Anthropic) for on-demand analysis.
 
 - Next.js 14 App Router + TypeScript
 - Tailwind CSS
-- Anthropic SDK (Claude Sonnet 4.6 by default)
+- Anthropic SDK (Claude Sonnet 5 by default, override with `ANTHROPIC_MODEL`)
 - Sleeper public API (no auth required)
 
 ## Setup
