@@ -1,12 +1,8 @@
 "use client";
 
+import { streamAI } from "@/lib/ai-client";
 import { PREBUILT_PROMPTS } from "@/lib/ai-context";
 import { useState } from "react";
-
-interface AIResponse {
-  text?: string;
-  error?: string;
-}
 
 export default function AIPanel() {
   const [prompt, setPrompt] = useState("");
@@ -21,17 +17,7 @@ export default function AIPanel() {
     setAnswer("");
     setTitle(t);
     try {
-      const res = await fetch("/api/ai/analyze", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: p, title: t })
-      });
-      const data = (await res.json()) as AIResponse;
-      if (!res.ok) {
-        setError(data.error ?? `HTTP ${res.status}`);
-      } else {
-        setAnswer(data.text ?? "");
-      }
+      await streamAI("/api/ai/analyze", { prompt: p, title: t }, setAnswer);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
     } finally {
@@ -93,11 +79,13 @@ export default function AIPanel() {
               {title}
             </div>
           )}
-          {loading && (
+          {/* Only until the first token lands — the streaming text takes over
+              as the progress indicator from there. */}
+          {loading && !answer && (
             <div className="flex items-center gap-3 text-muted">
               <span className="w-3 h-3 rounded-full bg-brand-blue animate-pulse" />
               <span className="font-cond uppercase tracking-wider text-sm">
-                Running Claude analysis…
+                Loading league data…
               </span>
             </div>
           )}
@@ -112,8 +100,13 @@ export default function AIPanel() {
               )}
             </div>
           )}
-          {!loading && !error && answer && (
-            <div className="prose-ai text-ink">{answer}</div>
+          {answer && (
+            <div className="prose-ai text-ink whitespace-pre-wrap">
+              {answer}
+              {loading && (
+                <span className="animate-pulse text-brand-blue">▍</span>
+              )}
+            </div>
           )}
           {!loading && !error && !answer && (
             <div className="text-dim text-sm font-cond uppercase tracking-wider">

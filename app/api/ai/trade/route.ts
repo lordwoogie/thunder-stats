@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import type Anthropic from "@anthropic-ai/sdk";
 import { buildLeagueContext, SYSTEM_PROMPT } from "@/lib/ai-context";
-import { ANTHROPIC_MODEL, getAnthropic } from "@/lib/anthropic";
+import { streamAnthropic } from "@/lib/ai-stream";
 import { buildLeagueBundle } from "@/lib/league-service";
 import { MY_ROSTER_ID } from "@/lib/constants";
 
@@ -34,8 +33,6 @@ export async function POST(req: Request) {
     const context = buildLeagueContext(bundle);
     const me = bundle.teams.find((t) => t.roster_id === MY_ROSTER_ID);
 
-    const anthropic = getAnthropic();
-
     const tradePrompt = `Evaluate this proposed trade from MY perspective (roster_id ${MY_ROSTER_ID}, team "${me?.team_name ?? "Lord Woogie"}").
 
 I SEND: ${body.my_side}
@@ -50,8 +47,7 @@ Please respond with:
 4. Dynasty angle: age curves, long-term trajectory of each asset.
 5. Counter-offer suggestion if applicable — be specific.`;
 
-    const response = await anthropic.messages.create({
-      model: ANTHROPIC_MODEL,
+    return streamAnthropic({
       max_tokens: 1400,
       system: SYSTEM_PROMPT,
       messages: [
@@ -67,15 +63,6 @@ Please respond with:
         }
       ]
     });
-
-    const text = response.content
-      .filter(
-        (b): b is Anthropic.Messages.TextBlock => b.type === "text"
-      )
-      .map((b) => b.text)
-      .join("\n\n");
-
-    return NextResponse.json({ text, model: response.model, usage: response.usage });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import type Anthropic from "@anthropic-ai/sdk";
 import { buildLeagueContext, SYSTEM_PROMPT } from "@/lib/ai-context";
-import { ANTHROPIC_MODEL, getAnthropic } from "@/lib/anthropic";
+import { streamAnthropic } from "@/lib/ai-stream";
 import { buildLeagueBundle } from "@/lib/league-service";
 
 export const runtime = "nodejs";
@@ -30,9 +29,7 @@ export async function POST(req: Request) {
     const bundle = await buildLeagueBundle();
     const context = buildLeagueContext(bundle);
 
-    const anthropic = getAnthropic();
-    const response = await anthropic.messages.create({
-      model: ANTHROPIC_MODEL,
+    return streamAnthropic({
       max_tokens: 1600,
       system: SYSTEM_PROMPT,
       messages: [
@@ -50,19 +47,6 @@ export async function POST(req: Request) {
           ]
         }
       ]
-    });
-
-    const text = response.content
-      .filter(
-        (b): b is Anthropic.Messages.TextBlock => b.type === "text"
-      )
-      .map((b) => b.text)
-      .join("\n\n");
-
-    return NextResponse.json({
-      text,
-      model: response.model,
-      usage: response.usage
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
