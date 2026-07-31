@@ -9,6 +9,7 @@ build
 .DS_Store
 .vercel
 next-env.d.ts
+tsconfig.tsbuildinfo
 .cache
 
 # Large PBP source cache for scripts/build-season-stats.mjs
