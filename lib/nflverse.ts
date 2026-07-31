@@ -113,6 +113,8 @@ export interface CrosswalkEntry {
   gsis_id: string;
   pfr_id: string | null;
   ktc_id: string | null;
+  fantasypros_id: string | null;
+  mfl_id: string | null;
   merge_name: string;
   position: string;
   team: string;
@@ -131,6 +133,8 @@ export async function getCrosswalkRaw(): Promise<CrosswalkEntry[]> {
   const iGsis = idx("gsis_id");
   const iPfr = idx("pfr_id");
   const iKtc = idx("ktc_id");
+  const iFp = idx("fantasypros_id");
+  const iMfl = idx("mfl_id");
   const iMerge = idx("merge_name");
   const iName = idx("name");
   const iPos = idx("position");
@@ -150,6 +154,8 @@ export async function getCrosswalkRaw(): Promise<CrosswalkEntry[]> {
       gsis_id: clean(r[iGsis]) ?? "",
       pfr_id: clean(r[iPfr]),
       ktc_id: clean(r[iKtc]),
+      fantasypros_id: clean(r[iFp]),
+      mfl_id: clean(r[iMfl]),
       merge_name: (r[iMerge] ?? r[iName] ?? "").trim(),
       position: r[iPos]?.trim() ?? "",
       team: r[iTeam]?.trim() ?? ""
@@ -182,6 +188,8 @@ export async function getCrosswalk(): Promise<Map<string, CrosswalkEntry>> {
       gsis_id: gsis,
       pfr_id: r[iPfr] && r[iPfr] !== "NA" ? r[iPfr] : null,
       ktc_id: r[iKtc] && r[iKtc] !== "NA" ? r[iKtc] : null,
+      fantasypros_id: null,
+      mfl_id: null,
       merge_name: (r[iMerge] ?? r[iName] ?? "").trim(),
       position: r[iPos]?.trim() ?? "",
       team: r[iTeam]?.trim() ?? ""

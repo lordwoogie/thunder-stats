@@ -6,6 +6,7 @@ import {
 } from "./types";
 import { PLAYER_NOTES, REF_STATS_BY_ID } from "./reference-stats";
 import type { SeasonUsage } from "./usage";
+import type { ConsensusRank, Projection } from "./fantasypros";
 import {
   DepthRoomMate,
   getDepthInfo
@@ -30,6 +31,8 @@ export function enrichPlayer(
   advancedMap: Map<string, NflAdvancedStat> | null = null,
   usageMap: Map<string, SeasonUsage> | null = null,
   depthRooms: Map<string, DepthRoomMate[]> | null = null,
+  ranks: Map<string, ConsensusRank> | null = null,
+  projections: Map<string, Projection> | null = null,
   gamesPlayed: number | null = null
 ): EnrichedPlayer {
   const sp = playersMap[playerId];
@@ -40,6 +43,8 @@ export function enrichPlayer(
   const depth = depthRooms
     ? getDepthInfo(playerId, playersMap, depthRooms)
     : null;
+  const rank = ranks?.get(playerId) ?? null;
+  const projection = projections?.get(playerId) ?? null;
 
   // Defense records use team abbr as player_id
   if (!sp && playerId.length <= 3 && playerId === playerId.toUpperCase()) {
@@ -59,7 +64,9 @@ export function enrichPlayer(
       note,
       advanced: null,
       usage: null,
-      depth: null
+      depth: null,
+      rank,
+      projection
     };
   }
 
@@ -92,7 +99,9 @@ export function enrichPlayer(
     note,
     advanced,
     usage,
-    depth
+    depth,
+    rank,
+    projection
   };
 }
 

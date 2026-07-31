@@ -179,6 +179,10 @@ export interface EnrichedPlayer {
   usage: import("./usage").SeasonUsage | null;
   /** NFL depth-chart standing and the room around them */
   depth: import("./depth-charts").DepthInfo | null;
+  /** FantasyPros dynasty superflex consensus rank */
+  rank: import("./fantasypros").ConsensusRank | null;
+  /** FantasyPros projection for the upcoming season */
+  projection: import("./fantasypros").Projection | null;
 }
 
 export interface TeamOverview {

@@ -52,6 +52,23 @@ In-process memory cache (`lib/sleeper.ts`). TTLs:
 
 For multi-region production, swap the `Map` in `lib/sleeper.ts` for Redis.
 
+## FantasyPros (optional)
+
+Set `FANTASYPROS_API_KEY` to enable forward-looking data. Without it the app
+works exactly as before — the integration degrades to empty maps rather than
+erroring.
+
+| Data | Endpoint |
+|------|----------|
+| Dynasty superflex ranks | `/nfl/{season}/consensus-rankings?position=OP&type=DYNASTY&scoring=PPR` |
+| Rookie board | same, `type=ROOKIES` |
+| Season projections | `/nfl/{season}/projections?position=ALL&week=0` |
+
+`position=OP` is FantasyPros' "Offensive Player" set, i.e. superflex — matching
+this league's format. Rankings join to Sleeper on `fantasypros_id` (72.6%
+crosswalk coverage); projections join on `mfl_id` (100%) with `fpid` as
+fallback.
+
 ## Deploying to Vercel
 
 1. Push this branch to GitHub.

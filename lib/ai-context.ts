@@ -90,6 +90,26 @@ function advancedBits(p: EnrichedPlayer): string[] {
   return bits;
 }
 
+/** Market consensus + forward projection from FantasyPros. */
+function marketBits(p: EnrichedPlayer): string[] {
+  const bits: string[] = [];
+  if (p.rank) {
+    const r = [
+      p.rank.ecr != null ? `ECR #${p.rank.ecr}` : null,
+      p.rank.pos_rank ? p.rank.pos_rank : null,
+      p.rank.tier != null ? `tier ${p.rank.tier}` : null,
+      p.rank.delta != null && p.rank.delta !== 0
+        ? `${p.rank.delta < 0 ? "rising" : "falling"} ${Math.abs(p.rank.delta)}`
+        : null
+    ].filter(Boolean);
+    if (r.length) bits.push(`DYN ${r.join("/")}`);
+  }
+  if (p.projection?.points_ppr != null) {
+    bits.push(`proj ${p.projection.points_ppr} PPR`);
+  }
+  return bits;
+}
+
 function line(p: EnrichedPlayer): string {
   const parts = [
     p.name,
@@ -99,6 +119,7 @@ function line(p: EnrichedPlayer): string {
     p.fpts_2025 != null ? `${p.fpts_2025} FPTS` : null,
     p.games_2025 != null ? `${p.games_2025}G` : null,
     ...usageBits(p),
+    ...marketBits(p),
     describeDepth(p.depth),
     p.injury_status ? `inj:${p.injury_status}` : null,
     p.note ? `(${p.note})` : null
@@ -171,6 +192,12 @@ export function buildLeagueContext(bundle: LeagueBundle): string {
   );
   lines.push(
     `Shares are computed vs. that player's own team totals. Snap % is nflverse ${SEASON} regular season.`
+  );
+  lines.push(
+    `- DYN: FantasyPros dynasty SUPERFLEX consensus (position=OP, PPR) for this league's exact format. ECR is overall expert consensus rank; tier groups roughly interchangeable players; rising/falling is recent movement. This is live market value — use it as the price, and your own read of usage/red-zone as the value. Gaps between the two are the trade edge.`
+  );
+  lines.push(
+    `- proj: FantasyPros projected full-PPR points for the UPCOMING season. Forward-looking, unlike everything else here. When projection and ${SEASON} red-zone volume disagree, say so explicitly — that is usually where mispricing lives.`
   );
   lines.push(
     `- Depth: current NFL depth-chart standing, e.g. "RB2 behind Bijan Robinson (3 deep)". This is live offseason data and reflects 2026 roster moves, so it can contradict ${SEASON} usage — when it does, the depth chart is the forward-looking signal and usage is the backward-looking one. A buried player with strong prior usage is a change-of-situation candidate, not a hold.`
