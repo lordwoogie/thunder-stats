@@ -165,6 +165,8 @@ function RbTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Share of team carries + targets">TOUCH%</Th>
               <Th title="Touches per game">TCH/G</Th>
               <Th title="Snap share">SNAP%</Th>
+              <Th title="Carries inside the 20">RZ CAR</Th>
+              <Th title="Touches inside the 10 — goal-line role">I10</Th>
               <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
@@ -199,6 +201,12 @@ function RbTable({ players }: { players: EnrichedPlayer[] }) {
                   </td>
                   <td className={tone(u?.snap_share, 0.65, 0.35)}>
                     {pct(u?.snap_share)}
+                  </td>
+                  <td className={tone(p.advanced?.rz_carries, 30, 8)}>
+                    {p.advanced?.rz_carries ?? "—"}
+                  </td>
+                  <td className={tone(p.advanced?.i10_opportunities, 18, 5)}>
+                    {p.advanced?.i10_opportunities ?? "—"}
                   </td>
                   <DepthCell p={p} />
                 </tr>
@@ -239,7 +247,9 @@ function PassCatcherTable({ players }: { players: EnrichedPlayer[] }) {
               <Th title="Yards per target">Y/TGT</Th>
               <Th>TD</Th>
               <Th title="Snap share">SNAP%</Th>
-              <Th title="Prior-season WOPR (nflverse)">WOPR*</Th>
+              <Th title="Weighted Opportunity Rating">WOPR</Th>
+              <Th title="Targets inside the 20">RZ TGT</Th>
+              <Th title="Touches inside the 10 — goal-line role">I10</Th>
               <Th title="NFL depth chart standing">DEPTH</Th>
             </tr>
           </thead>
@@ -280,6 +290,12 @@ function PassCatcherTable({ players }: { players: EnrichedPlayer[] }) {
                     {p.advanced?.wopr != null
                       ? p.advanced.wopr.toFixed(2)
                       : "—"}
+                  </td>
+                  <td className={tone(p.advanced?.rz_targets, 15, 4)}>
+                    {p.advanced?.rz_targets ?? "—"}
+                  </td>
+                  <td className={tone(p.advanced?.i10_opportunities, 8, 2)}>
+                    {p.advanced?.i10_opportunities ?? "—"}
                   </td>
                   <DepthCell p={p} />
                 </tr>

@@ -10,3 +10,6 @@ build
 .vercel
 next-env.d.ts
 .cache
+
+# Large PBP source cache for scripts/build-season-stats.mjs
+.cache/
