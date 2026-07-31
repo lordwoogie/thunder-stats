@@ -1,16 +1,159 @@
 "use client";
 
-import { LEAGUE_MEMBERS } from "@/lib/constants";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-export default function TradeForm() {
-  const [mySide, setMySide] = useState("");
-  const [theirSide, setTheirSide] = useState("");
-  const [theirTeam, setTheirTeam] = useState<string>("");
+export interface TradePlayer {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  ppg: number | null;
+  rank: number | null;
+}
+
+export interface TradePick {
+  id: string;
+  label: string;
+}
+
+export interface TradeTeam {
+  roster_id: number;
+  team_name: string;
+  display_name: string;
+  players: TradePlayer[];
+  picks: TradePick[];
+}
+
+/** A chosen asset, kept as the exact string the API will receive. */
+interface Asset {
+  key: string;
+  label: string;
+}
+
+function playerLabel(p: TradePlayer): string {
+  const bits = [p.position, p.team].filter(Boolean).join(" · ");
+  const rank = p.rank ? ` · #${p.rank}` : "";
+  const ppg = p.ppg != null ? ` · ${p.ppg} PPG` : "";
+  return `${p.name} (${bits}${rank}${ppg})`;
+}
+
+/**
+ * Dropdown that appends to a list rather than replacing a value, plus the
+ * chosen assets as removable chips. A trade is many-to-many, so a plain
+ * <select> can't express it and a multi-select is miserable on a phone.
+ */
+function AssetPicker({
+  label,
+  team,
+  selected,
+  onChange,
+  emptyHint
+}: {
+  label: string;
+  team: TradeTeam | null;
+  selected: Asset[];
+  onChange: (next: Asset[]) => void;
+  emptyHint: string;
+}) {
+  const chosen = useMemo(
+    () => new Set(selected.map((a) => a.key)),
+    [selected]
+  );
+
+  function add(key: string) {
+    if (!team || !key) return;
+    const player = team.players.find((p) => p.id === key);
+    const pick = team.picks.find((p) => p.id === key);
+    const asset = player
+      ? { key, label: playerLabel(player) }
+      : pick
+        ? { key, label: pick.label }
+        : null;
+    if (asset && !chosen.has(key)) onChange([...selected, asset]);
+  }
+
+  return (
+    <div>
+      <label className="font-cond text-xs uppercase tracking-wider text-muted block mb-1.5">
+        {label}
+      </label>
+
+      <select
+        // Always snaps back to the placeholder so the same option can be
+        // re-picked after being removed.
+        value=""
+        onChange={(e) => add(e.target.value)}
+        disabled={!team}
+        className="w-full bg-bg-alt border border-[rgba(0,122,193,0.25)] rounded-lg p-2.5 outline-none focus:border-brand-blue disabled:opacity-50"
+      >
+        <option value="">{team ? "+ add player or pick" : emptyHint}</option>
+        {team && team.players.length > 0 && (
+          <optgroup label="Players">
+            {team.players.map((p) => (
+              <option key={p.id} value={p.id} disabled={chosen.has(p.id)}>
+                {playerLabel(p)}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {team && team.picks.length > 0 && (
+          <optgroup label="Draft picks">
+            {team.picks.map((p) => (
+              <option key={p.id} value={p.id} disabled={chosen.has(p.id)}>
+                {p.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+
+      <div className="flex flex-wrap gap-1.5 mt-2 min-h-[28px]">
+        {selected.length === 0 && (
+          <span className="text-dim text-xs font-cond uppercase tracking-wider self-center">
+            nothing selected
+          </span>
+        )}
+        {selected.map((a) => (
+          <button
+            key={a.key}
+            onClick={() => onChange(selected.filter((x) => x.key !== a.key))}
+            className="group flex items-center gap-1.5 text-xs bg-bg-alt border border-[rgba(0,122,193,0.35)] hover:border-red-400/70 rounded-full pl-2.5 pr-2 py-1 transition-colors"
+            title="Remove"
+          >
+            <span>{a.label}</span>
+            <span className="text-dim group-hover:text-red-400">×</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function TradeForm({
+  teams,
+  myRosterId,
+  loadError
+}: {
+  teams: TradeTeam[];
+  myRosterId: number;
+  loadError: string | null;
+}) {
+  const [theirRosterId, setTheirRosterId] = useState<number | null>(null);
+  const [mySide, setMySide] = useState<Asset[]>([]);
+  const [theirSide, setTheirSide] = useState<Asset[]>([]);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
+
+  const myTeam = teams.find((t) => t.roster_id === myRosterId) ?? null;
+  const theirTeam = teams.find((t) => t.roster_id === theirRosterId) ?? null;
+
+  function pickCounterparty(rosterId: number | null) {
+    setTheirRosterId(rosterId);
+    // Their assets belong to the old counterparty; keep my side intact.
+    setTheirSide([]);
+  }
 
   async function submit() {
     setLoading(true);
@@ -21,9 +164,11 @@ export default function TradeForm() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          my_side: mySide,
-          their_side: theirSide,
-          their_team: theirTeam || undefined,
+          my_side: mySide.map((a) => a.label).join(", "),
+          their_side: theirSide.map((a) => a.label).join(", "),
+          their_team: theirTeam
+            ? `${theirTeam.team_name} (${theirTeam.display_name})`
+            : undefined,
           notes: notes || undefined
         })
       });
@@ -37,50 +182,57 @@ export default function TradeForm() {
     }
   }
 
+  if (loadError) {
+    return (
+      <div className="card p-5 text-red-400 text-sm">
+        <div className="font-cond uppercase tracking-wider mb-1">
+          Could not load rosters
+        </div>
+        {loadError}
+      </div>
+    );
+  }
+
   return (
     <div className="grid md:grid-cols-2 gap-5">
-      <section className="card p-5 space-y-3">
+      <section className="card p-5 space-y-4">
         <div>
           <label className="font-cond text-xs uppercase tracking-wider text-muted block mb-1.5">
-            I send
-          </label>
-          <textarea
-            value={mySide}
-            onChange={(e) => setMySide(e.target.value)}
-            placeholder="e.g. Malik Nabers, 2026 1st"
-            className="w-full min-h-[80px] bg-bg-alt border border-[rgba(0,122,193,0.25)] rounded-lg p-3 outline-none focus:border-brand-blue resize-y"
-          />
-        </div>
-
-        <div>
-          <label className="font-cond text-xs uppercase tracking-wider text-muted block mb-1.5">
-            I receive
-          </label>
-          <textarea
-            value={theirSide}
-            onChange={(e) => setTheirSide(e.target.value)}
-            placeholder="e.g. Christian McCaffrey, Isaac Guerendo, 2027 1st"
-            className="w-full min-h-[80px] bg-bg-alt border border-[rgba(0,122,193,0.25)] rounded-lg p-3 outline-none focus:border-brand-blue resize-y"
-          />
-        </div>
-
-        <div>
-          <label className="font-cond text-xs uppercase tracking-wider text-muted block mb-1.5">
-            Counterparty (optional)
+            Trade with
           </label>
           <select
-            value={theirTeam}
-            onChange={(e) => setTheirTeam(e.target.value)}
+            value={theirRosterId ?? ""}
+            onChange={(e) =>
+              pickCounterparty(e.target.value ? Number(e.target.value) : null)
+            }
             className="w-full bg-bg-alt border border-[rgba(0,122,193,0.25)] rounded-lg p-2.5 outline-none focus:border-brand-blue"
           >
             <option value="">— choose a team —</option>
-            {LEAGUE_MEMBERS.filter((m) => m.roster_id !== 1).map((m) => (
-              <option key={m.roster_id} value={`${m.team_name} (${m.display_name})`}>
-                {m.team_name} · {m.display_name}
-              </option>
-            ))}
+            {teams
+              .filter((t) => t.roster_id !== myRosterId)
+              .map((t) => (
+                <option key={t.roster_id} value={t.roster_id}>
+                  {t.team_name} · {t.display_name}
+                </option>
+              ))}
           </select>
         </div>
+
+        <AssetPicker
+          label="I send"
+          team={myTeam}
+          selected={mySide}
+          onChange={setMySide}
+          emptyHint="roster unavailable"
+        />
+
+        <AssetPicker
+          label="I receive"
+          team={theirTeam}
+          selected={theirSide}
+          onChange={setTheirSide}
+          emptyHint="pick a team first"
+        />
 
         <div>
           <label className="font-cond text-xs uppercase tracking-wider text-muted block mb-1.5">
@@ -94,10 +246,20 @@ export default function TradeForm() {
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => {
+              setMySide([]);
+              setTheirSide([]);
+            }}
+            disabled={loading || (!mySide.length && !theirSide.length)}
+            className="text-xs font-cond uppercase tracking-wider text-dim hover:text-muted disabled:opacity-40"
+          >
+            Clear
+          </button>
           <button
             onClick={submit}
-            disabled={loading || !mySide.trim() || !theirSide.trim()}
+            disabled={loading || !mySide.length || !theirSide.length}
             className="btn-primary"
           >
             {loading ? "Evaluating…" : "Evaluate Trade"}
@@ -122,7 +284,7 @@ export default function TradeForm() {
         )}
         {!loading && !error && !result && (
           <div className="text-dim text-sm font-cond uppercase tracking-wider">
-            Fill in both sides of the trade and hit Evaluate.
+            Pick a team, choose both sides, then hit Evaluate.
           </div>
         )}
         {!loading && !error && result && (

@@ -6,11 +6,13 @@ import { buildDepthRooms } from "./depth-charts";
 import { getDynastyRanks, getProjections } from "./fantasypros";
 import { buildSeasonUsage } from "./usage";
 import { SEASON } from "./constants";
+import { buildPickInventory } from "./draft-picks";
 import {
   getAllPlayers,
   getLeague,
   getRosters,
   getSeasonStats,
+  getTradedPicks,
   getUsers
 } from "./sleeper";
 import { EnrichedPlayer, TeamOverview } from "./types";
@@ -40,8 +42,18 @@ function teamNameFor(
 }
 
 export async function buildLeagueBundle(): Promise<LeagueBundle> {
-  const [league, rosters, users, players, stats, nfl, snaps, ranks, projections] =
-    await Promise.all([
+  const [
+    league,
+    rosters,
+    users,
+    players,
+    stats,
+    nfl,
+    snaps,
+    ranks,
+    projections,
+    tradedPicks
+  ] = await Promise.all([
     getLeague(),
     getRosters(),
     getUsers(),
@@ -50,7 +62,9 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
     getNflAdvancedBySleeper(),
     getSnapSharesBySleeper(),
     getDynastyRanks(),
-    getProjections()
+    getProjections(),
+    // Non-fatal: without it every roster simply shows its own untraded picks.
+    getTradedPicks().catch(() => [])
   ]);
   const adv = nfl.bySleeper;
   // Derived current-season usage. Sleeper supplies official volume and PPR
@@ -59,6 +73,18 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
   const usage = buildSeasonUsage(SEASON, stats, players, snaps, adv);
   // Depth charts come free with the /players/nfl payload we already fetch.
   const depthRooms = buildDepthRooms(players);
+
+  const pickInventory = buildPickInventory(
+    rosters.map((r) => r.roster_id),
+    tradedPicks,
+    league,
+    (rid) => {
+      const roster = rosters.find((x) => x.roster_id === rid);
+      return roster
+        ? teamNameFor(roster.owner_id, users).display_name
+        : `Roster ${rid}`;
+    }
+  );
 
   const teams: TeamOverview[] = rosters.map((r) => {
     const names = teamNameFor(r.owner_id, users);
@@ -99,7 +125,8 @@ export async function buildLeagueBundle(): Promise<LeagueBundle> {
         wins: r.settings?.wins ?? 0,
         losses: r.settings?.losses ?? 0,
         ties: r.settings?.ties ?? 0
-      }
+      },
+      picks: pickInventory.get(r.roster_id) ?? []
     };
   });
 

@@ -197,4 +197,34 @@ export interface TeamOverview {
   total_fpts_2025: number;
   avg_age: number;
   record: { wins: number; losses: number; ties: number };
+  /** Draft picks this roster currently owns, soonest first. */
+  picks: DraftPick[];
+}
+
+/**
+ * Raw entry from Sleeper's /league/{id}/traded_picks.
+ * `roster_id` is the pick's ORIGINAL owner; `owner_id` is who holds it now.
+ */
+export interface SleeperTradedPick {
+  season: string;
+  round: number;
+  roster_id: number;
+  previous_owner_id: number | null;
+  owner_id: number;
+}
+
+/** A draft pick as currently owned, resolved from origin + trade history. */
+export interface DraftPick {
+  /** Stable id for React keys and selection: "2027-1-3". */
+  id: string;
+  season: string;
+  round: number;
+  /** Roster the pick originally belonged to. */
+  origin_roster_id: number;
+  /** Roster that holds it now. */
+  owner_roster_id: number;
+  /** True when the holder is not the original owner. */
+  acquired: boolean;
+  /** Display label, e.g. "2027 1st" or "2027 1st (via Miguelboys)". */
+  label: string;
 }
