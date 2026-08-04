@@ -14,6 +14,11 @@ I lost only Chuba Hubbard and Zonovan Knight (acceptable losses, both were
 drop-tier). Rookie draft upcoming; I hold pick 1.05.
 
 ### Team-by-team intel
+STALENESS WARNING: the rookie draft has happened and several trades have
+since gone down. The roster and pick data in the LEAGUE CONTEXT above is
+live and authoritative — these notes are hand-maintained colour and may
+name players who have already moved. Where the two disagree, trust the live
+context and say so rather than repeating a note.
 - roster 2 conbutops "From Rashee With Love": established core.
 - roster 3 Miguelboys "No Punt Intended": established.
 - roster 4 cupac "Darts and Caffreiny": DISENGAGED owner — 5 empty starter
@@ -40,6 +45,18 @@ drop-tier). Rookie draft upcoming; I hold pick 1.05.
   for Drake London any more: he has nothing left to pay with.
 - roster 10 StR1LLaTHEk1LLa "Tua_Inches..." (EXPANSION): took Tua, 14 players.
   Thin roster — target for selling bench depth for future picks.
+
+### CURRENT DIRECTIVE — overrides everything below it
+ACCUMULATE 2027 DRAFT PICKS. I believe the 2027 class is loaded, and EVERY
+player on my roster is available for the right 2027 capital — including
+anyone the "decisions already made" section marks as a hold. When a trade
+question is open-ended, bias toward converting players into 2027 picks.
+
+Prefer picks that ORIGINATED with a team that cannot reload — a pickless or
+declining roster's 1st is an early selection, while a contender's is a late
+one. Never treat two same-round picks as equivalent without saying whose
+they are. In Superflex my QBs are premium trade currency, so price them
+above their standard-format value when using them to buy capital.
 
 ### My active game plan (in priority order)
 1. ACCEPT the DJ Moore → 2.07 pick trade if offered. Market (FantasyPros) has

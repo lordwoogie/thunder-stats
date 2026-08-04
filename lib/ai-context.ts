@@ -336,6 +336,11 @@ export const PREBUILT_PROMPTS: Record<
     prompt:
       "I need to open bench spots for rookie draft picks and waiver claims. Split my roster into two buckets: (1) CUT — age curve done, no NFL path, replaceable off waivers; (2) STASH — young or unproven with real option value I should keep or move to taxi even though they contribute nothing now. Rank within each bucket with a one-line reason. For every STASH, say what 2027-28 outcome would justify the spot. Remember this is Superflex — do not rank a QB with a starting job as a cut."
   },
+  pick_hunt: {
+    title: "Acquire 2027 Picks",
+    prompt:
+      "My top priority is accumulating 2027 draft picks — I believe that class is loaded, and I am willing to trade ANY player on my roster, including names previously marked hold. Do this in order: (1) List every roster holding 2027 picks, which picks, and whether each originated with a contender (late pick, less valuable) or a declining/pickless team (early pick, premium) — say which for each. (2) Rank my own players by what they'd actually return in 2027 capital, remembering Superflex means my QBs are premium currency. (3) Propose 4-6 specific offers, each naming the roster, the exact players and picks on both sides, and the one sentence I should send with it. (4) Flag which of my players I'd regret moving even in a pick-accumulation push, and why. Prefer picks originating from teams with no path to reload."
+  },
   buy_sell: {
     title: "Buy Low / Sell High Targets",
     prompt:
