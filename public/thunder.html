@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CHURCH OF THUNDER — Live Stats</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%230A0E1A%27/%3E%3Cpath d=%27M32 6 L10 36 H26 L22 58 L54 26 H38 L42 6 Z%27 fill=%27%23007AC1%27/%3E%3C/svg%3E">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap');
   :root {
@@ -43,7 +44,10 @@
   .header { display:flex; align-items:center; justify-content:space-between; padding:1rem 2.5rem; background:linear-gradient(180deg,rgba(0,45,98,0.6) 0%,transparent 100%); border-bottom:1px solid rgba(0,122,193,0.15); position:relative; }
   .header::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--thunder-blue),var(--thunder-orange),transparent); opacity:0.5; }
   .header-brand { font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem; letter-spacing:0.12em; text-transform:uppercase; }
-  .header-brand span { color:var(--thunder-orange); }
+  .header-brand { display:flex; align-items:center; gap:0.8rem; }
+  .header-brand .brand-text span { color:var(--thunder-orange); }
+  .brand-bolt { width:34px; height:34px; filter:drop-shadow(0 0 8px rgba(0,122,193,0.5)); }
+  .brand-tag { font-family:'Barlow Condensed',sans-serif; font-weight:500; font-size:0.8rem; letter-spacing:0.2em; color:var(--text-dim); padding-left:0.8rem; border-left:1px solid rgba(0,122,193,0.25); }
   .header-right { display:flex; align-items:center; gap:1.5rem; }
   .header-status { display:flex; align-items:center; gap:0.5rem; font-family:'Barlow Condensed',sans-serif; font-size:0.9rem; color:var(--text-secondary); }
   .status-dot { width:8px; height:8px; border-radius:50%; background:#22C55E; animation:pulse-dot 2s ease infinite; }
@@ -69,11 +73,13 @@
   .score-divider { font-family:'Oswald',sans-serif; font-size:3rem; color:var(--text-dim); font-weight:300; }
   .game-clock { font-family:'Barlow Condensed',sans-serif; font-size:1.3rem; font-weight:600; color:var(--thunder-orange); letter-spacing:0.1em; text-transform:uppercase; padding:0.3rem 1rem; border:1px solid rgba(239,97,0,0.3); border-radius:6px; background:rgba(239,97,0,0.08); }
   .game-clock.live::before { content:'● '; animation:pulse-dot 1.5s ease infinite; }
+  .game-clock.final { color:var(--text-secondary); border-color:rgba(139,157,195,0.3); background:rgba(139,157,195,0.08); }
+  .countdown.small { font-size:1.6rem; margin-top:0.2rem; }
 
   .quarter-bar { display:flex; justify-content:center; margin-bottom:1.5rem; width:100%; max-width:700px; }
   .quarter-grid { display:grid; gap:0; align-items:center; font-family:'Barlow Condensed',sans-serif; font-size:1rem; background:var(--bg-card); border-radius:10px; border:1px solid rgba(0,122,193,0.08); padding:0.6rem 1.5rem; width:100%; }
   .qg-cell { text-align:center; padding:0.3rem 0.5rem; color:var(--text-secondary); }
-  .qg-cell.header { color:var(--text-dim); font-size:0.8rem; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; }
+  .qg-cell.hdr { color:var(--text-dim); font-size:0.8rem; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; }
   .qg-cell.team-label { text-align:left; font-weight:700; color:var(--text-primary); font-size:1.05rem; }
   .qg-cell.team-label.thunder { color:var(--thunder-blue); }
   .qg-cell.total { font-weight:700; color:var(--text-primary); font-size:1.1rem; }
@@ -142,7 +148,7 @@
 </div>
 <div id="dashboard">
   <div class="header">
-    <div class="header-brand">Church of <span>Thunder</span></div>
+    <div class="header-brand"><svg class="brand-bolt" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="bolt-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#007AC1"/><stop offset="100%" stop-color="#EF6100"/></linearGradient></defs><path d="M32 6 L10 36 H26 L22 58 L54 26 H38 L42 6 Z" fill="url(#bolt-g)"/></svg><span class="brand-text">Church of <span>Thunder</span></span><span class="brand-tag">Cowboy Cold · Lively Beerworks</span></div>
     <div class="header-right">
       <div class="header-status">
         <div class="status-dot" id="status-dot"></div>
@@ -163,7 +169,10 @@
 <script>
 const BASE="https://api.balldontlie.io/nba/v1";
 const OKC="OKC";
-let API_KEY="",thunderGame=null,otherGames=[],upcomingGames=[],gameIsLive=false,refreshTimer=null,countdownTimer=null,errorCount=0;
+const TZ="America/Chicago";
+const ISO_RE=/^\d{4}-\d{2}-\d{2}T/;
+const LIVE_MS=30000,PREGAME_MS=60000,IDLE_MS=300000;
+let API_KEY="",thunderGame=null,otherGames=[],upcomingGames=[],upcomingFor="",gameIsLive=false,gameIsFinal=false,refreshTimer=null,countdownTimer=null,errorCount=0,pollMs=IDLE_MS;
 
 function getKey(){try{return localStorage.getItem("cot_key")||"";}catch(e){return"";}}
 function setKey(k){try{localStorage.setItem("cot_key",k);}catch(e){}}
@@ -198,7 +207,7 @@ function showSetupErr(m){document.getElementById("setup-error").textContent=m;}
 
 async function boot(){
   setBoot("Finding today's Thunder game...");
-  try{await fetchData();setBoot("Launching...");await wait(400);
+  try{await fetchData(true);setBoot("Launching...");await wait(400);
     document.getElementById("boot-screen").classList.add("fade-out");await wait(600);
     document.getElementById("boot-screen").classList.add("hidden");
     document.getElementById("dashboard").classList.add("active");
@@ -215,127 +224,181 @@ async function api(path,params={}){
   }
   const r=await fetch(u.toString(),{headers:{"Authorization":API_KEY}});
   if(r.status===429){await wait(15000);const r2=await fetch(u.toString(),{headers:{"Authorization":API_KEY}});if(!r2.ok)throw new Error("API "+r2.status);return r2.json();}
-  if(!r.ok)throw new Error("API "+r.status+": "+path);
+  if(!r.ok)throw new Error("API "+path+" returned "+r.status);
   return r.json();
 }
 
-function todayCT(){
-  const ct=new Date(new Date().toLocaleString("en-US",{timeZone:"America/Chicago"}));
+/* ---------- date / status helpers ---------- */
+function ctDateString(d){
+  const ct=new Date(d.toLocaleString("en-US",{timeZone:TZ}));
   return ct.getFullYear()+"-"+String(ct.getMonth()+1).padStart(2,"0")+"-"+String(ct.getDate()).padStart(2,"0");
 }
+function todayCT(){return ctDateString(new Date());}
+function isOKC(g){return g.home_team?.abbreviation===OKC||g.visitor_team?.abbreviation===OKC;}
+// balldontlie puts the tip-off ISO timestamp in `status` for games that haven't started.
+function gameStart(g){
+  if(!g)return null;
+  const src=g.datetime||(ISO_RE.test(g.status||"")?g.status:null);
+  if(src){const d=new Date(src);if(!isNaN(d))return d;}
+  if(g.date){const d=new Date(g.date+"T00:00:00");if(!isNaN(d))return d;}
+  return null;
+}
+function fmtTime(d){return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:TZ});}
+function fmtDay(d,long){return d.toLocaleDateString("en-US",{weekday:long?"long":"short",month:"short",day:"numeric",timeZone:TZ});}
+function statusKind(g){
+  const s=(g?.status||"").toLowerCase();
+  if(ISO_RE.test(g?.status||""))return"pregame";
+  if(s.includes("final"))return"final";
+  if(s.includes("qtr")||s.includes("quarter")||s.includes("half")||s.includes("ot")||s.includes("in progress"))return"live";
+  if(s.includes("postponed")||s.includes("cancel"))return"other";
+  return s?"other":"pregame";
+}
+// Human-readable status: "Tip-off 8:30 PM CT" / "2nd Qtr" / "Final"
+function statusText(g,withClock){
+  const k=statusKind(g);
+  if(k==="pregame"){const d=gameStart(g);return d?"Tip-off "+fmtTime(d)+" CT":"Pre-game";}
+  if(k==="live"&&withClock&&g.time&&String(g.time).trim()&&g.time!==g.status)return g.time+" · "+g.status;
+  return g.status||"";
+}
+function qv(g,side,key){const a=g[side+"_"+key],b=g[side+"_team_"+key];return a!=null?a:(b!=null?b:null);}
 
-async function fetchData(){
+/* ---------- data ---------- */
+async function fetchData(isBoot){
   try{
     const today=todayCT();
     const res=await api("/games",{"dates[]":[today]});
     const games=res.data||[];
-    thunderGame=games.find(g=>g.home_team?.abbreviation===OKC||g.visitor_team?.abbreviation===OKC)||null;
-    otherGames=games.filter(g=>g.home_team?.abbreviation!==OKC&&g.visitor_team?.abbreviation!==OKC);
-    if(thunderGame){const st=(thunderGame.status||"").toLowerCase();gameIsLive=st.includes("qtr")||st.includes("quarter")||st.includes("half");}
-    else{gameIsLive=false;if(upcomingGames.length===0)await fetchUpcoming();}
+    thunderGame=games.find(isOKC)||null;
+    otherGames=games.filter(g=>!isOKC(g));
+    const kind=statusKind(thunderGame);
+    gameIsLive=!!thunderGame&&kind==="live";
+    gameIsFinal=!!thunderGame&&kind==="final";
+    // Upcoming schedule is cached in memory; refetch when the CT date rolls over.
+    if((!thunderGame||gameIsFinal)&&upcomingFor!==today)await fetchUpcoming(today);
     render();errorCount=0;hideError();
   }catch(e){
     console.error("Fetch err:",e);errorCount++;
+    if(isBoot)throw e;
     showError(errorCount<=3?"Refresh failed ("+errorCount+"/3)":"Multiple failures. Check internet.");
     if(errorCount>3)errorCount=0;render();
   }
   updateTimestamp();
 }
 
-async function fetchUpcoming(){
+async function fetchUpcoming(today){
   try{
-    const dates=[];for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()+i);dates.push(d.toISOString().split("T")[0]);}
+    const dates=[];const base=new Date(today+"T12:00:00");
+    for(let i=1;i<=7;i++){const d=new Date(base);d.setDate(d.getDate()+i);dates.push(ctDateString(d));}
     const res=await api("/games",{"dates[]":dates});
-    upcomingGames=(res.data||[]).filter(g=>g.home_team?.abbreviation===OKC||g.visitor_team?.abbreviation===OKC).sort((a,b)=>new Date(a.datetime||a.date)-new Date(b.datetime||b.date));
+    upcomingGames=(res.data||[]).filter(isOKC).sort((a,b)=>(gameStart(a)||0)-(gameStart(b)||0));
+    upcomingFor=today;
   }catch(e){console.error(e);}
 }
 
+/* ---------- render ---------- */
 function render(){
   const main=document.getElementById("main-content"),dot=document.getElementById("status-dot"),st=document.getElementById("status-text");
   if(!thunderGame){renderPregame(main);dot.className="status-dot";st.textContent="No game today — checking every 5 min";}
   else if(gameIsLive){renderGame(main);dot.className="status-dot live";st.textContent="LIVE — updating every 30s";}
-  else{renderGame(main);dot.className="status-dot";st.textContent=(thunderGame.status||"").toLowerCase().includes("final")?"FINAL":"Pre-game";}
+  else if(gameIsFinal){renderGame(main);dot.className="status-dot";st.textContent="FINAL";}
+  else{renderGame(main);dot.className="status-dot";const d=gameStart(thunderGame);st.textContent=(d?"Tip-off "+fmtTime(d)+" CT":"Pre-game")+" — checking every 60s";}
   renderTicker();
 }
 
 function renderGame(el){
   const g=thunderGame,home=g.home_team||{},away=g.visitor_team||{},isHome=home.abbreviation===OKC;
   const hs=g.home_team_score||0,as=g.visitor_team_score||0;
-  let clockText=g.status||"",clockCls="game-clock";
-  const sl=clockText.toLowerCase();
-  if(sl.includes("qtr")||sl.includes("quarter")||sl.includes("half")){clockCls+=" live";if(g.time&&g.time!==g.status)clockText=g.time+" · "+g.status;}
+  const kind=statusKind(g);
+  let clockText=statusText(g,true),clockCls="game-clock";
+  if(kind==="live")clockCls+=" live";
+  if(kind==="final")clockCls+=" final";
+
+  let cdHTML="";
+  if(kind==="pregame"){
+    const d=gameStart(g);
+    if(d)cdHTML='<div class="countdown small" id="countdown" data-target="'+d.toISOString()+'"></div>';
+  }
 
   let qHTML="";
-  if(g.home_q1!=null){
-    const qs=[];
-    if(g.home_q1!=null)qs.push({l:"Q1",h:g.home_q1,v:g.visitor_q1});
-    if(g.home_q2!=null)qs.push({l:"Q2",h:g.home_q2,v:g.visitor_q2});
-    if(g.home_q3!=null)qs.push({l:"Q3",h:g.home_q3,v:g.visitor_q3});
-    if(g.home_q4!=null)qs.push({l:"Q4",h:g.home_q4,v:g.visitor_q4});
-    if(g.home_ot1!=null)qs.push({l:"OT",h:g.home_ot1,v:g.visitor_ot1});
+  const qs=[];
+  for(let i=1;i<=4;i++){if(qv(g,"home","q"+i)!=null)qs.push({l:"Q"+i,h:qv(g,"home","q"+i),v:qv(g,"visitor","q"+i)});}
+  for(let i=1;i<=4;i++){if(qv(g,"home","ot"+i)!=null)qs.push({l:i===1?"OT":"OT"+i,h:qv(g,"home","ot"+i),v:qv(g,"visitor","ot"+i)});}
+  if(qs.length){
     const cp=g.period||0,cols="80px repeat("+qs.length+",55px) 15px 55px";
-    const hdr=qs.map((q,i)=>'<div class="qg-cell header '+(i+1===cp&&gameIsLive?'active-q':'')+'">'+q.l+'</div>').join('');
-    const hr=qs.map((q,i)=>'<div class="qg-cell '+(i+1===cp&&gameIsLive?'active-q':'')+'">'+(q.h??'-')+'</div>').join('');
-    const ar=qs.map((q,i)=>'<div class="qg-cell '+(i+1===cp&&gameIsLive?'active-q':'')+'">'+(q.v??'-')+'</div>').join('');
-    qHTML='<div class="quarter-bar"><div class="quarter-grid" style="grid-template-columns:'+cols+'"><div class="qg-cell header"></div>'+hdr+'<div class="qg-cell"></div><div class="qg-cell header">T</div><div class="qg-cell team-label '+(isHome?'thunder':'')+'">'+(home.abbreviation)+'</div>'+hr+'<div class="qg-cell sep">|</div><div class="qg-cell total">'+hs+'</div><div class="qg-cell team-label '+(!isHome?'thunder':'')+'">'+(away.abbreviation)+'</div>'+ar+'<div class="qg-cell sep">|</div><div class="qg-cell total">'+as+'</div></div></div>';
+    const act=i=>(i+1===cp&&gameIsLive?' active-q':'');
+    const hdr=qs.map((q,i)=>'<div class="qg-cell hdr'+act(i)+'">'+q.l+'</div>').join('');
+    const hr=qs.map((q,i)=>'<div class="qg-cell'+act(i)+'">'+(q.h??'-')+'</div>').join('');
+    const ar=qs.map((q,i)=>'<div class="qg-cell'+act(i)+'">'+(q.v??'-')+'</div>').join('');
+    qHTML='<div class="quarter-bar"><div class="quarter-grid" style="grid-template-columns:'+cols+'"><div class="qg-cell hdr"></div>'+hdr+'<div class="qg-cell"></div><div class="qg-cell hdr">T</div><div class="qg-cell team-label '+(isHome?'thunder':'')+'">'+(home.abbreviation)+'</div>'+hr+'<div class="qg-cell sep">|</div><div class="qg-cell total">'+hs+'</div><div class="qg-cell team-label '+(!isHome?'thunder':'')+'">'+(away.abbreviation)+'</div>'+ar+'<div class="qg-cell sep">|</div><div class="qg-cell total">'+as+'</div></div></div>';
   }
 
   let othHTML="";
   if(otherGames.length>0){
     othHTML='<div class="other-scores" style="margin-top:1rem">'+otherGames.map(og=>{
       const h=og.home_team?.abbreviation||'?',a=og.visitor_team?.abbreviation||'?';
-      const stl=(og.status||'').toLowerCase(),isL=stl.includes('qtr')||stl.includes('half');
-      return '<div class="other-game"><div class="teams">'+a+' @ '+h+'</div><div class="sc">'+(og.visitor_team_score||0)+' - '+(og.home_team_score||0)+'</div><div class="status">'+(isL?'● ':'')+og.status+'</div></div>';
+      const k=statusKind(og);
+      const sc=k==="pregame"?'&nbsp;':(og.visitor_team_score||0)+' - '+(og.home_team_score||0);
+      return '<div class="other-game"><div class="teams">'+a+' @ '+h+'</div><div class="sc">'+sc+'</div><div class="status">'+(k==="live"?'● ':'')+statusText(og,false)+'</div></div>';
     }).join('')+'</div>';
   }
 
-  el.innerHTML='<div class="scoreboard fade-in"><div class="team-block '+(isHome?'thunder':'')+'"><div class="team-abbr">'+(home.abbreviation||'---')+'</div><div class="team-name">'+(home.full_name||'')+'</div></div><div class="score-center"><div class="score-nums"><div class="score-val '+(isHome?'thunder':'')+' '+(hs>as?'leading':'')+'">'+hs+'</div><div class="score-divider">—</div><div class="score-val '+(!isHome?'thunder':'')+' '+(as>hs?'leading':'')+'">'+as+'</div></div><div class="'+clockCls+'">'+clockText+'</div></div><div class="team-block '+(!isHome?'thunder':'')+'"><div class="team-abbr">'+(away.abbreviation||'---')+'</div><div class="team-name">'+(away.full_name||'')+'</div></div></div>'+qHTML+othHTML;
+  el.innerHTML='<div class="scoreboard fade-in"><div class="team-block '+(isHome?'thunder':'')+'"><div class="team-abbr">'+(home.abbreviation||'---')+'</div><div class="team-name">'+(home.full_name||'')+'</div></div><div class="score-center"><div class="score-nums"><div class="score-val '+(isHome?'thunder':'')+' '+(hs>as?'leading':'')+'">'+hs+'</div><div class="score-divider">—</div><div class="score-val '+(!isHome?'thunder':'')+' '+(as>hs?'leading':'')+'">'+as+'</div></div><div class="'+clockCls+'">'+clockText+'</div>'+cdHTML+'</div><div class="team-block '+(!isHome?'thunder':'')+'"><div class="team-abbr">'+(away.abbreviation||'---')+'</div><div class="team-name">'+(away.full_name||'')+'</div></div></div>'+qHTML+othHTML;
+  if(cdHTML)startCountdown();else stopCountdown();
 }
 
 function renderPregame(el){
   const next=upcomingGames[0];let nextHTML="";
   if(next){
     const isH=next.home_team?.abbreviation===OKC,opp=isH?next.visitor_team:next.home_team;
-    const dt=new Date(next.datetime||next.date);
-    const ds=dt.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric",timeZone:"America/Chicago"});
-    const ts=dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Chicago"});
-    nextHTML='<div class="next-game-card"><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:0.85rem;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase">Next Game</div><div class="next-game-vs"><span style="color:var(--thunder-blue)">OKC</span><span class="vs">vs</span><span>'+(opp?.abbreviation||'?')+'</span></div><div class="next-game-time">'+ds+' · '+ts+' · '+(isH?'HOME':'AWAY')+'</div><div class="countdown" id="countdown" data-target="'+dt.toISOString()+'"></div></div>';
+    const dt=gameStart(next);
+    const when=dt?fmtDay(dt,true)+' · '+fmtTime(dt)+' CT':'TBD';
+    nextHTML='<div class="next-game-card"><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:0.85rem;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase">Next Game</div><div class="next-game-vs"><span style="color:var(--thunder-blue)">OKC</span><span class="vs">'+(isH?'vs':'@')+'</span><span>'+(opp?.abbreviation||'?')+'</span></div><div class="next-game-time">'+when+' · '+(isH?'HOME':'AWAY')+'</div>'+(dt?'<div class="countdown" id="countdown" data-target="'+dt.toISOString()+'"></div>':'')+'</div>';
   }
   let schedHTML="";
   if(upcomingGames.length>1){
     schedHTML='<div style="margin-top:0.5rem"><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:0.8rem;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.6rem">Upcoming Schedule</div><div class="schedule-list">'+upcomingGames.slice(1,6).map(g=>{
       const isH=g.home_team?.abbreviation===OKC,opp=isH?g.visitor_team:g.home_team;
-      const dt=new Date(g.datetime||g.date);
-      const ds=dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",timeZone:"America/Chicago"});
-      const ts=dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Chicago"});
-      return '<div class="schedule-item"><span class="opp">'+(isH?'vs':'@')+' '+(opp?.abbreviation)+'</span> · '+ds+' · '+ts+'</div>';
+      const dt=gameStart(g);
+      return '<div class="schedule-item"><span class="opp">'+(isH?'vs':'@')+' '+(opp?.abbreviation)+'</span>'+(dt?' · '+fmtDay(dt,false)+' · '+fmtTime(dt):'')+'</div>';
     }).join('')+'</div></div>';
   }
   el.innerHTML='<div class="pregame-container fade-in"><div class="pregame-title"><span class="blue">Thunder</span> <span class="orange">Up</span></div><div class="pregame-sub">No Game Today</div>'+nextHTML+schedHTML+'</div>';
-  if(next)startCountdown();
+  if(next&&gameStart(next))startCountdown();else stopCountdown();
 }
 
 function renderTicker(){
   const track=document.getElementById("ticker-track");if(!track)return;let items=[];
-  if(thunderGame){const h=thunderGame.home_team,a=thunderGame.visitor_team;items.push('<span class="ticker-item"><span class="team">⚡ '+(a?.abbreviation)+' @ '+(h?.abbreviation)+'</span>: <span class="hl">'+(thunderGame.visitor_team_score||0)+' - '+(thunderGame.home_team_score||0)+'</span> · '+(thunderGame.status||'')+'</span>');}
-  otherGames.forEach(g=>{items.push('<span class="ticker-item"><span class="team">'+(g.visitor_team?.abbreviation)+' @ '+(g.home_team?.abbreviation)+'</span>: <span class="hl">'+(g.visitor_team_score||0)+' - '+(g.home_team_score||0)+'</span> · '+(g.status||'')+'</span>');});
-  if(items.length===0){items.push('<span class="ticker-item"><span class="team">⚡ THUNDER UP ⚡</span> Church of Thunder — OKC\'s Home for Playoff Basketball</span>');upcomingGames.slice(0,4).forEach(g=>{const isH=g.home_team?.abbreviation===OKC,opp=isH?g.visitor_team:g.home_team;const dt=new Date(g.datetime||g.date);const ds=dt.toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"});items.push('<span class="ticker-item"><span class="team">'+(isH?'vs':'@')+' '+(opp?.abbreviation)+'</span> · '+ds+'</span>');});}
+  const line=(g,bolt)=>{const h=g.home_team,a=g.visitor_team,k=statusKind(g);const sc=k==="pregame"?'':'<span class="hl">'+(g.visitor_team_score||0)+' - '+(g.home_team_score||0)+'</span> · ';return '<span class="ticker-item"><span class="team">'+(bolt?'⚡ ':'')+(a?.abbreviation)+' @ '+(h?.abbreviation)+'</span>: '+sc+statusText(g,false)+'</span>';};
+  if(thunderGame)items.push(line(thunderGame,true));
+  otherGames.forEach(g=>items.push(line(g,false)));
+  if(items.length===0){items.push('<span class="ticker-item"><span class="team">⚡ THUNDER UP ⚡</span> Church of Thunder — OKC\'s Home for Thunder Basketball</span>');upcomingGames.slice(0,4).forEach(g=>{const isH=g.home_team?.abbreviation===OKC,opp=isH?g.visitor_team:g.home_team;const dt=gameStart(g);items.push('<span class="ticker-item"><span class="team">'+(isH?'vs':'@')+' '+(opp?.abbreviation)+'</span>'+(dt?' · '+fmtDay(dt,false)+' · '+fmtTime(dt):'')+'</span>');});}
   const c=items.join('');track.innerHTML=c+c;
 }
 
-function startCountdown(){
-  if(countdownTimer)clearInterval(countdownTimer);
-  countdownTimer=setInterval(()=>{const el=document.getElementById("countdown");if(!el)return;const diff=new Date(el.dataset.target)-new Date();if(diff<=0){el.textContent="GAME TIME";return;}const d=Math.floor(diff/864e5),h=Math.floor((diff%864e5)/36e5),m=Math.floor((diff%36e5)/6e4),s=Math.floor((diff%6e4)/1e3);let p=[];if(d>0)p.push(d+"D");p.push(h+"H",String(m).padStart(2,"0")+"M",String(s).padStart(2,"0")+"S");el.textContent=p.join(" : ");},1000);
+function tickCountdown(){
+  const el=document.getElementById("countdown");if(!el)return;
+  const diff=new Date(el.dataset.target)-new Date();
+  if(diff<=0){el.textContent="GAME TIME";return;}
+  const d=Math.floor(diff/864e5),h=Math.floor((diff%864e5)/36e5),m=Math.floor((diff%36e5)/6e4),s=Math.floor((diff%6e4)/1e3);
+  let p=[];if(d>0)p.push(d+"D");p.push(h+"H",String(m).padStart(2,"0")+"M",String(s).padStart(2,"0")+"S");el.textContent=p.join(" : ");
 }
+function startCountdown(){stopCountdown();tickCountdown();countdownTimer=setInterval(tickCountdown,1000);}
+function stopCountdown(){if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}}
 
-function startLoop(){if(refreshTimer)clearInterval(refreshTimer);const ms=gameIsLive?30000:300000;refreshTimer=setInterval(async()=>{const was=gameIsLive;await fetchData();if(gameIsLive!==was)startLoop();},ms);}
+// Live: 30s. Thunder game today but not started: 60s so we catch tip-off quickly. Otherwise: 5 min.
+function desiredPollMs(){if(gameIsLive)return LIVE_MS;if(thunderGame&&!gameIsFinal)return PREGAME_MS;return IDLE_MS;}
+function startLoop(){
+  if(refreshTimer)clearInterval(refreshTimer);
+  pollMs=desiredPollMs();
+  refreshTimer=setInterval(async()=>{await fetchData(false);if(desiredPollMs()!==pollMs)startLoop();},pollMs);
+}
 function updateTimestamp(){const el=document.getElementById("last-update");if(el)el.textContent="Updated "+new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:"2-digit"});}
 function showError(m){const el=document.getElementById("error-toast");el.textContent=m;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),8000);}
 function hideError(){document.getElementById("error-toast").classList.remove("show");}
 function toggleFS(){if(!document.fullscreenElement){document.documentElement.requestFullscreen();document.getElementById("fs-btn").innerHTML="&#x26F6; Exit FS";}else{document.exitFullscreen();document.getElementById("fs-btn").innerHTML="&#x26F6; Fullscreen";}}
 function wait(ms){return new Promise(r=>setTimeout(r,ms));}
-document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;if(e.key==="f"||e.key==="F")toggleFS();if(e.key==="r"||e.key==="R")fetchData();});
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&API_KEY)fetchData();});
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;if(e.key==="f"||e.key==="F")toggleFS();if(e.key==="r"||e.key==="R")fetchData(false);});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&API_KEY&&document.getElementById("dashboard").classList.contains("active"))fetchData(false);});
 </script>
 </body>
 </html>
