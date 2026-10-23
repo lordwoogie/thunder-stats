@@ -1,5 +1,9 @@
 # The Octogon — Sleeper Dynasty Analyzer
 
+> Also in this repo: the **Church of Thunder** live-scores TV dashboard (`index.html`,
+> served by GitHub Pages at https://lordwoogie.github.io/thunder-stats). See
+> `THUNDER-DASHBOARD.md`.
+
 Next.js app for Nick's Sleeper dynasty league **The Octogon** (10-team Superflex,
 Full PPR — expanded from 8 in 2026). Pulls live rosters from the Sleeper API, enriches them with 2025
 season stats, and uses Claude (Anthropic) for on-demand analysis.

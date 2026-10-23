@@ -2,6 +2,10 @@
 
 Context that should survive between sessions. Read this first.
 
+> **This repo also hosts the Church of Thunder TV dashboard** — the single
+> `index.html` at the root, served by GitHub Pages from `main`. Its notes live
+> in `THUNDER-DASHBOARD.md`. Never delete or rename `index.html`.
+
 ## The league
 
 10-team **dynasty superflex, full PPR**, Sleeper league `1328541263934259200`.
